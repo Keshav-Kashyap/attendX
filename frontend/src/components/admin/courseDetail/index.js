@@ -1,0 +1,9 @@
+export { default as CourseDetailHeader } from './CourseDetailHeader';
+export { default as CourseHeroCard } from './CourseHeroCard';
+export { default as CourseDetailActions } from './CourseDetailActions';
+export { default as CourseDetailTabs } from './CourseDetailTabs';
+export { default as CurriculumTab } from './CurriculumTab';
+export { default as StudentsTab } from './StudentsTab';
+export { default as ScheduleTab } from './ScheduleTab';
+export { default as ControlsTab } from './ControlsTab';
+export { default as DirectMessageModal } from './DirectMessageModal';

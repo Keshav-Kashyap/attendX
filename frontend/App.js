@@ -1,0 +1,4 @@
+import 'expo-router/entry';
+import { App } from 'expo-router/build/qualified-entry';
+
+export default App;

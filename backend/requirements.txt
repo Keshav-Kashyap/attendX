@@ -1,0 +1,14 @@
+fastapi
+uvicorn[standard]
+pydantic
+SQLAlchemy
+psycopg2-binary
+python-dotenv
+google-api-python-client
+PyJWT
+requests
+werkzeug
+Pillow
+numpy
+scikit-learn
+cloudinary
