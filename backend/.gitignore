@@ -31,3 +31,8 @@ Thumbs.db
 # Node
 node_modules/
 dist/
+
+
+# Firebase credentials
+firebase-service-account.json
+*service-account*.json
