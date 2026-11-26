@@ -19,7 +19,6 @@ export default function LoginForm({ role, onLogin, onSwitchToSignup }) {
   const isSubmitting = loginMutation.isPending;
 
   const handleSubmit = async () => {
-    console.log("Login handleSubmit triggered");
     setErrorMessage('');
     const cleanEmail = email.trim();
     const cleanPassword = password;
@@ -30,14 +29,11 @@ export default function LoginForm({ role, onLogin, onSwitchToSignup }) {
     }
 
     try {
-      console.log("Logging in user:", { email: cleanEmail });
       const result = await loginMutation.mutateAsync({
         login: cleanEmail,
         email: cleanEmail,
         password: cleanPassword,
       });
-
-      console.log("Login API response:", result);
 
       if (result?.success) {
         const userData = result.data?.user;
@@ -124,14 +120,6 @@ export default function LoginForm({ role, onLogin, onSwitchToSignup }) {
           )}
         </TouchableOpacity>
 
-        <View className="flex-row justify-center mt-2">
-          <Text className="text-xs text-muted-foreground">
-            Don't have an account?{' '}
-          </Text>
-          <TouchableOpacity onPress={onSwitchToSignup} activeOpacity={0.7}>
-            <Text className="text-xs font-bold text-primary">Sign Up</Text>
-          </TouchableOpacity>
-        </View>
       </CardFooter>
     </Card>
   );

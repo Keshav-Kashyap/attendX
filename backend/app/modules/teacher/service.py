@@ -46,8 +46,21 @@ def save_teacher_profile(user_id: int, profile_data: dict):
             teacher = Teacher(user_id=user_id)
             db.session.add(teacher)
 
+        name = profile_data.get("name") or profile_data.get("username")
+        email = profile_data.get("email")
+        qualification = profile_data.get("qualification")
+        specialization = profile_data.get("specialization") or profile_data.get("department")
+
+        if name:
+            user.username = str(name).strip()
+        if email:
+            user.email = str(email).strip().lower()
         if photo:
             user.profile_image = photo
+        if qualification is not None:
+            teacher.qualification = str(qualification).strip() or None
+        if specialization is not None:
+            teacher.specialization = str(specialization).strip() or None
         if employee_code is not None:
             teacher.employee_code = str(employee_code).strip() or None
         if phone is not None:
@@ -196,10 +209,13 @@ def get_teacher_students(user_id: int):
         elif course_ids:
             students = Student.query.filter(Student.course_id.in_(course_ids)).all()
 
-        # Teacher sessions
+        # Teacher sessions (only confirmed sessions count)
         teacher_session_ids = []
         if teacher:
-            sessions = AttendanceSession.query.filter(AttendanceSession.teacher_id == teacher.id).all()
+            sessions = AttendanceSession.query.filter(
+                AttendanceSession.teacher_id == teacher.id,
+                AttendanceSession.is_confirmed == True,
+            ).all()
             teacher_session_ids = [s.id for s in sessions]
 
         total_sessions_count = len(teacher_session_ids)
@@ -303,7 +319,8 @@ def get_teacher_reports(user_id: int):
 
         if teacher:
             sessions = AttendanceSession.query.filter(
-                AttendanceSession.teacher_id == teacher.id
+                AttendanceSession.teacher_id == teacher.id,
+                AttendanceSession.is_confirmed == True,
             ).order_by(AttendanceSession.created_at.desc()).all()
 
             assignments = TeacherAssignment.query.filter(
@@ -355,12 +372,12 @@ def get_teacher_reports(user_id: int):
         # Subject-wise breakdown from conducted sessions
         subject_dict = {}
         for s in sessions:
-            sub_name = s.subject_name or (s.subject.name if s.subject else "Subject")
+            sub_name = s.subject.name if s.subject else "Subject"
             if sub_name not in subject_dict:
                 subject_dict[sub_name] = {
                     "subject": sub_name,
-                    "code": s.subject_code or (s.subject.code if s.subject else ""),
-                    "course": s.course_name or (s.course.name if s.course else ""),
+                    "code": s.subject.code if s.subject else "",
+                    "course": s.course.name if s.course else "",
                     "sessions_count": 0,
                     "total_present": 0,
                     "total_enrolled": 0,
@@ -400,7 +417,7 @@ def get_teacher_reports(user_id: int):
             rate = round((s.total_present / s.total_enrolled) * 100) if s.total_enrolled > 0 else 0
             daily_trends.append({
                 "date": s.created_at.strftime("%d %b") if s.created_at else "Today",
-                "subject": s.subject_name or (s.subject.name if s.subject else "Lecture"),
+                "subject": s.subject.name if s.subject else "Lecture",
                 "rate": rate,
                 "present": s.total_present,
                 "absent": s.total_absent,

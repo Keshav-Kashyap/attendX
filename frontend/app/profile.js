@@ -1,23 +1,24 @@
-import React from 'react';
-import { useRouter, Redirect } from 'expo-router';
+import React, { useEffect } from 'react';
+import { router } from 'expo-router';
 import AppShell from '../src/components/layout/AppShell';
 import ProfileScreen from '../src/screens/common/ProfileScreen';
 import { useAuthStore } from '../src/store/useAuthStore';
 import { useLogout } from '../src/hooks/useAuth';
 
 export default function ProfilePage() {
-  const router = useRouter();
   const user = useAuthStore((state) => state.user);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const isLoading = useAuthStore((state) => state.isLoading);
   const logoutMutation = useLogout();
 
-  if (isLoading) {
-    return null;
-  }
+  useEffect(() => {
+    if (!isLoading && (!isAuthenticated || !user)) {
+      router.replace('/');
+    }
+  }, [isLoading, isAuthenticated, user]);
 
-  if (!isAuthenticated || !user) {
-    return <Redirect href="/" />;
+  if (isLoading || !isAuthenticated || !user) {
+    return null;
   }
 
   const handleLogout = () => {

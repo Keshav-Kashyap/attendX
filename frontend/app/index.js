@@ -12,7 +12,7 @@ export default function IndexPage() {
 
   const containerStyle = {
     flex: 1,
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) : 0,
+    paddingTop: Platform.OS   === 'android' ? (StatusBar.currentHeight || 0) : 0,
   };
 
   if (isLoading) {
@@ -25,10 +25,6 @@ export default function IndexPage() {
   }
 
   if (isAuthenticated && user) {
-    if (user.role === 'teacher') {
-      return <Redirect href="/teacher" />;
-    }
-
     const hasBiometrics = Boolean(
       user.profile_image ||
       user.student_profile?.profile_image ||
@@ -58,9 +54,7 @@ export default function IndexPage() {
       userData?.student_profile?.voice_embedding
     );
 
-    if (userData?.role === 'teacher') {
-      router.replace('/teacher');
-    } else if (userData?.role === 'student' && !hasBiometrics) {
+    if (userData?.role === 'student' && !hasBiometrics) {
       router.replace('/biometrics');
     } else {
       router.replace('/home');

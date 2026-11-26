@@ -7,6 +7,7 @@ from .service import (
     get_attendance_sessions_history,
     get_session_details,
     update_attendance_record,
+    confirm_attendance_session,
 )
 
 attendance_bp = APIRouter(
@@ -23,11 +24,16 @@ class AttendanceScanSchema(BaseModel):
     subject: Optional[str] = "Computer Vision (CS-401)"
     room: Optional[str] = "Block B, Hall 3"
     batch: Optional[str] = None
+    semester_id: Optional[int] = None
 
 
 class AttendanceRecordUpdateSchema(BaseModel):
     status: str
     remarks: Optional[str] = None
+
+
+class AttendanceConfirmSchema(BaseModel):
+    records: Optional[List[dict]] = None
 
 
 @attendance_bp.post("/scan")
@@ -49,6 +55,16 @@ async def session_details(
     user_id: int = Depends(token_required)
 ):
     return get_session_details(session_id)
+
+
+@attendance_bp.post("/sessions/{session_id}/confirm")
+async def confirm_session(
+    session_id: int,
+    payload: Optional[AttendanceConfirmSchema] = None,
+    user_id: int = Depends(token_required)
+):
+    data = payload.model_dump() if payload else {}
+    return confirm_attendance_session(user_id, session_id, data)
 
 
 @attendance_bp.put("/records/{record_id}")

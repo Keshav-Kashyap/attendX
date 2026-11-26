@@ -1,8 +1,10 @@
+from datetime import datetime
 from app.config.database import db
 from sqlalchemy import or_
 from app.modules.users.model import User
 from app.modules.student.model import Student
 from app.modules.teacher.model import Teacher
+from app.modules.auth.model import InviteToken
 from app.utils.common import hash_password, verify_password, validate_password
 from app.utils.jwt import create_access_token
 from fastapi.responses import JSONResponse
@@ -12,10 +14,49 @@ VALID_ROLES = {"student", "teacher", "admin"}
 
 def register_user(user_data: dict):
     try:
+        invite_token = user_data.get("invite_token")
+        if not invite_token or not str(invite_token).strip():
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "success": False,
+                    "message": "A valid invite token is required for registration."
+                }
+            )
+
+        invite = InviteToken.query.filter(
+            InviteToken.token == str(invite_token).strip()
+        ).first()
+        if not invite:
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "success": False,
+                    "message": "Invalid invite link."
+                }
+            )
+        if invite.is_used:
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "success": False,
+                    "message": "This invite link has already been used."
+                }
+            )
+        if invite.expires_at < datetime.utcnow():
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "success": False,
+                    "message": "This invite link has expired. Ask your admin for a new QR/link."
+                }
+            )
+
         email = user_data.get("email")
         password = user_data.get("password")
         username = user_data.get("username")
-        role = user_data.get("role", "student")
+        # Enforce role, course, and semester strictly from the verified invite token
+        role = invite.role
         auth_provider = user_data.get("auth_provider", "email")
 
         if not email or not password:
@@ -99,9 +140,10 @@ def register_user(user_data: dict):
         if role == "student":
             roll_number = user_data.get("roll_number") or user_data.get("identifier")
             phone = user_data.get("phone")
-            course_id = user_data.get("course_id")
-            course = user_data.get("course")
-            clean_roll = str(roll_number).strip() if roll_number else None
+            course_id = invite.course_id
+            semester_id = invite.semester_id
+            course = None
+            clean_roll = str(roll_number).strip().upper() if roll_number else None
 
             if clean_roll:
                 existing_student = Student.query.filter(Student.roll_number == clean_roll).first()
@@ -113,6 +155,20 @@ def register_user(user_data: dict):
                             "message": f"Roll number '{clean_roll}' is already registered with another student."
                         }
                     )
+            else:
+                # Auto-increment STU-XXXX roll number sequentially
+                existing_rolls = Student.query.with_entities(Student.roll_number).all()
+                max_num = 1000
+                for (r_val,) in existing_rolls:
+                    if r_val and str(r_val).upper().startswith("STU-"):
+                        suffix = str(r_val).upper().split("STU-", 1)[1]
+                        if suffix.isdigit():
+                            max_num = max(max_num, int(suffix))
+                next_num = max(max_num + 1, 1000 + Student.query.count() + 1)
+                clean_roll = f"STU-{next_num}"
+                while Student.query.filter(Student.roll_number == clean_roll).first():
+                    next_num += 1
+                    clean_roll = f"STU-{next_num}"
 
             student = Student(
                 user_id=user.id,
@@ -122,8 +178,33 @@ def register_user(user_data: dict):
             db.session.add(student)
             db.session.flush()
 
+            if photo:
+                from app.modules.attendance.ml.face_pipeline import extract_face_embedding
+                from app.utils.cloudinary import upload_image_to_cloudinary
+
+                computed_face_emb, face_err = extract_face_embedding(photo)
+                if not computed_face_emb:
+                    db.session.rollback()
+                    return JSONResponse(
+                        status_code=400,
+                        content={
+                            "success": False,
+                            "message": face_err or "Could not detect a clear face in your photo. Please upload a clear front-facing photo."
+                        }
+                    )
+                student.face_embedding = computed_face_emb
+
+                clean_identifier = clean_roll or str(student.id)
+                cloudinary_url = upload_image_to_cloudinary(
+                    photo,
+                    folder="attendx/students",
+                    public_id=f"student_{student.id}_{clean_identifier}"
+                )
+                if cloudinary_url:
+                    user.profile_image = cloudinary_url
+
             if course or course_id:
-                from app.modules.course.model import Course, CourseEnrollment
+                from app.modules.course.model import Course, CourseEnrollment, Semester
                 from sqlalchemy import func
                 matched_course = None
                 if course_id:
@@ -142,9 +223,26 @@ def register_user(user_data: dict):
                     matched_course = Course.query.first()
 
                 if matched_course:
+                    matched_semester = None
+                    if semester_id:
+                        matched_semester = Semester.query.filter(
+                            Semester.id == semester_id,
+                            Semester.course_id == matched_course.id
+                        ).first()
+                        if not matched_semester:
+                            matched_semester = Semester.query.filter(
+                                Semester.semester_number == semester_id,
+                                Semester.course_id == matched_course.id
+                            ).first()
+                    if not matched_semester:
+                        matched_semester = Semester.query.filter(
+                            Semester.course_id == matched_course.id
+                        ).order_by(Semester.semester_number.asc()).first()
+
                     enrollment = CourseEnrollment(
                         student_id=student.id,
                         course_id=matched_course.id,
+                        semester_id=matched_semester.id if matched_semester else None,
                         academic_year="2026-2027",
                         status="active"
                     )
@@ -176,12 +274,17 @@ def register_user(user_data: dict):
             teacher = Teacher(
                 user_id=user.id,
                 employee_code=clean_code,
-                phone=str(phone).strip() if phone else None
+                phone=str(phone).strip() if phone else None,
+                qualification=str(user_data.get("qualification")).strip() if user_data.get("qualification") else None,
+                specialization=str(user_data.get("specialization")).strip() if user_data.get("specialization") else None,
             )
             db.session.add(teacher)
             db.session.flush()
             teacher_profile_data = teacher.to_dict()
 
+        invite.is_used = True
+        invite.used_at = datetime.utcnow()
+        invite.used_by_user_id = user.id
         db.session.commit()
 
         return JSONResponse(
@@ -423,6 +526,9 @@ def change_user_password(user_id: int, payload: dict):
             )
 
         user.password = hash_password(new_password)
+        invite.is_used = True
+        invite.used_at = datetime.utcnow()
+        invite.used_by_user_id = user.id
         db.session.commit()
 
         return JSONResponse(

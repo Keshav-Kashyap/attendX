@@ -13,18 +13,17 @@ import { Card } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { ConfirmDialog } from '../../components/ui/alert-dialog';
 import { useAdminCourses, useAdminTeachers, useAssignTeacher } from '../../hooks/useAdmin';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import SchedulePicker from '../../components/ui/SchedulePicker';
 
 export default function AdminTeacherAssignScreen({ user }) {
-  const router = useRouter();
   const params = useLocalSearchParams();
 
   const handleBack = () => {
     if (router.canGoBack()) {
       router.back();
     } else {
-      router.replace('/admin_teachers');
+      router.replace('/users/teachers');
     }
   };
   const goBack = handleBack;
@@ -181,7 +180,7 @@ export default function AdminTeacherAssignScreen({ user }) {
         icon: 'checkmark-circle',
         onConfirm: () => {
           setConfirmDialog(null);
-          router.replace('/admin_teachers');
+          router.replace('/users/teachers');
         },
       });
     } catch (err) {
@@ -344,7 +343,7 @@ export default function AdminTeacherAssignScreen({ user }) {
                     onPress={() => handleCourseChange(crs.id)}
                     className={`px-3.5 py-2.5 rounded-2xl border ${
                       isSelected
-                        ? 'bg-primary border-primary shadow-sm'
+                        ? 'bg-primary border-primary'
                         : 'bg-card border-border'
                     }`}
                   >

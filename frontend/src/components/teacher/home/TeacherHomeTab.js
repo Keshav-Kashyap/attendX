@@ -107,15 +107,21 @@ export default function TeacherHomeTab({ user, onNavigateTab, onStartAttendanceS
           displayTime = sub.schedule;
         }
 
-        const matchedTodaySession = todaySessions.find(
+        const todaySessionsForSub = todaySessions.filter(
           (sess) =>
             (sub.id && sess.subject_id === sub.id) ||
             (sub.name &&
               (sess.subject_name || sess.subject || '').trim().toLowerCase() ===
                 sub.name.trim().toLowerCase())
         );
+        const matchedTodaySession = todaySessionsForSub[0] || null;
 
         const isCompletedToday = Boolean(matchedTodaySession);
+        // If confirmed today when not scheduled today, or confirmed multiple times today,
+        // treat the next upcoming scheduled slot for this subject as already completed early
+        const skipNextUpcoming =
+          (todaySlot === null && todaySessionsForSub.length > 0) ||
+          (todaySlot !== null && todaySessionsForSub.length > 1);
         const isLiveNow = Boolean(
           todaySlot && nowMins >= todaySlot.startMins && nowMins < todaySlot.endMins
         );
@@ -146,6 +152,7 @@ export default function TeacherHomeTab({ user, onNavigateTab, onStartAttendanceS
           slots,
           todaySlot,
           isCompletedToday,
+          skipNextUpcoming,
           todaySession: matchedTodaySession || null,
           isLiveNow,
         };
@@ -167,6 +174,7 @@ export default function TeacherHomeTab({ user, onNavigateTab, onStartAttendanceS
     let upcomingDayItems = [];
     let upcomingDayText = '';
     if (extracted.length > 0) {
+      const skippedUpcomingKeys = new Set();
       for (let offset = 1; offset <= 7; offset += 1) {
         const targetDay = ((todayIsoDay + offset - 1) % 7) + 1;
         const candidates = extracted
@@ -174,7 +182,15 @@ export default function TeacherHomeTab({ user, onNavigateTab, onStartAttendanceS
             item,
             slot: item.slots.find((s) => s.day === targetDay) || null,
           }))
-          .filter((entry) => entry.slot !== null)
+          .filter((entry) => {
+            if (entry.slot === null) return false;
+            const subKey = entry.item.subjectId || entry.item.subjectName;
+            if (entry.item.skipNextUpcoming && !skippedUpcomingKeys.has(subKey)) {
+              skippedUpcomingKeys.add(subKey);
+              return false;
+            }
+            return true;
+          })
           .sort((a, b) => a.slot.startMins - b.slot.startMins);
 
         if (candidates.length > 0) {
@@ -258,65 +274,67 @@ export default function TeacherHomeTab({ user, onNavigateTab, onStartAttendanceS
   };
 
   return (
-    <View className="flex-1 bg-background relative">
+    <View className="flex-1 bg-[#F5F6FA] relative">
       <ScrollView
-        className="flex-1 px-4 pt-2.5 pb-0"
-        contentContainerStyle={{ paddingBottom: 88 }}
+        className="flex-1"
+        contentContainerStyle={{ paddingBottom: 120 }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor="#0052cc" />
+          <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor="#3446D4" />
         }
       >
         {/* 1. Welcome Banner */}
         <Welcome user={user} role="teacher" />
 
-        {/* 2. Overview Metric Cards */}
-        <TodayClassesOverview
-          totalClasses={totalClassesCount}
-          completedAttendance={completedAttendanceCount}
-          avgRate={avgAttendanceRate}
-          totalSessions={totalSessionsCount}
-          auditsCount={auditsCount}
-          auditNote={auditNote}
-          isLoading={isCoursesLoading || isHistoryLoading}
-          isError={isCoursesError || isHistoryError}
-          error={coursesError || historyError}
-          onRetry={handleRefresh}
-          onNavigateTab={onNavigateTab}
-        />
+        <View className="px-4 -mt-9">
+          {/* 2. Overview Metric Cards */}
+          <TodayClassesOverview
+            totalClasses={totalClassesCount}
+            completedAttendance={completedAttendanceCount}
+            avgRate={avgAttendanceRate}
+            totalSessions={totalSessionsCount}
+            auditsCount={auditsCount}
+            auditNote={auditNote}
+            isLoading={isCoursesLoading || isHistoryLoading}
+            isError={isCoursesError || isHistoryError}
+            error={coursesError || historyError}
+            onRetry={handleRefresh}
+            onNavigateTab={onNavigateTab}
+          />
 
-        {/* 3. Hero Card: Next Upcoming Class (Shared Common Card) */}
-        <NextClassCard
-          role="teacher"
-          nextClass={nextClass}
-          isLoading={isCoursesLoading}
-          onStartAttendance={handleStartAttendance}
-          onPressSyllabus={() => onNavigateTab && onNavigateTab('classes')}
-        />
+          {/* 3. Hero Card: Next Upcoming Class (Shared Common Card) */}
+          <NextClassCard
+            role="teacher"
+            nextClass={nextClass}
+            isLoading={isCoursesLoading}
+            onStartAttendance={handleStartAttendance}
+            onPressSyllabus={() => onNavigateTab && onNavigateTab('classes')}
+          />
 
-        {/* 4. Upcoming / Scheduled Classes (Shared Common List) */}
-        <UpcomingClassesList
-          role="teacher"
-          classes={todayRemainingClasses}
-          upcomingClasses={nextDayClasses}
-          upcomingDayLabel={nextDayLabel}
-          isError={isCoursesError}
-          error={coursesError}
-          onRetry={handleRefresh}
-          onPressClass={handleStartAttendance}
-        />
+          {/* 4. Upcoming / Scheduled Classes (Shared Common List) */}
+          <UpcomingClassesList
+            role="teacher"
+            classes={todayRemainingClasses}
+            upcomingClasses={nextDayClasses}
+            upcomingDayLabel={nextDayLabel}
+            isError={isCoursesError}
+            error={coursesError}
+            onRetry={handleRefresh}
+            onPressClass={handleStartAttendance}
+          />
 
-        {/* 5. Recent Classes / Sessions Conducted (Shared Common List) */}
-        <RecentClassesList
-          role="teacher"
-          recentClasses={attendanceHistory || []}
-          onViewAll={() => onNavigateTab && onNavigateTab('reports')}
-          onPressItem={() => onNavigateTab && onNavigateTab('reports')}
-        />
+          {/* 5. Recent Classes / Sessions Conducted (Shared Common List) */}
+          <RecentClassesList
+            role="teacher"
+            recentClasses={attendanceHistory || []}
+            onViewAll={() => onNavigateTab && onNavigateTab('reports')}
+            onPressItem={() => onNavigateTab && onNavigateTab('reports')}
+          />
 
-        {/* 6. Quick Actions: Student Lookup & Export Reports */}
-        <QuickActionsGrid onNavigateTab={onNavigateTab} />
+          {/* 6. Quick Actions: Student Lookup & Export Reports */}
+          <QuickActionsGrid onNavigateTab={onNavigateTab} />
+        </View>
       </ScrollView>
 
       {/* Floating Bottom-Right Speed Dial Pill: Scan Now */}
@@ -331,7 +349,7 @@ export default function TeacherHomeTab({ user, onNavigateTab, onStartAttendanceS
           shadowRadius: 12,
           elevation: 6,
         }}
-        className="absolute bottom-5 right-4 rounded-full px-4 py-3 flex-row items-center gap-2 border border-blue-400/35"
+        className="absolute bottom-24 right-4 rounded-full px-4 py-3 flex-row items-center gap-2 border border-blue-400/35"
       >
         <Camera size={18} color="#ffffff" strokeWidth={2} />
         <Text className="text-sm font-medium text-white tracking-tight">

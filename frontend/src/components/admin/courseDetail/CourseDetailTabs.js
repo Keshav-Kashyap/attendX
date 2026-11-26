@@ -24,8 +24,19 @@ export default function CourseDetailTabs({
             activeOpacity={0.75}
             onPress={() => onTabChange?.(tab.id)}
             className={`flex-1 py-2 rounded-xl items-center justify-center ${
-              isActive ? 'bg-white shadow-sm' : ''
+              isActive ? 'bg-white' : ''
             }`}
+            style={
+              isActive
+                ? {
+                    shadowColor: '#0f172a',
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowOpacity: 0.06,
+                    shadowRadius: 3,
+                    elevation: 1,
+                  }
+                : undefined
+            }
           >
             <Text
               className={`text-xs font-medium ${

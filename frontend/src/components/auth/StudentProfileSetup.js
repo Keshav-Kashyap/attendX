@@ -25,7 +25,7 @@ let DocumentPicker = null;
 try {
   DocumentPicker = require('expo-document-picker');
 } catch (e) {
-  console.log('DocumentPicker not available:', e?.message);
+  // DocumentPicker unavailable
 }
 
 export default function StudentProfileSetup({ user, onComplete }) {
@@ -262,15 +262,12 @@ export default function StudentProfileSetup({ user, onComplete }) {
     }
 
     try {
-      console.log('Submitting biometric enrollment...');
       const response = await saveProfileMutation.mutateAsync({
         profile_image: photoData || undefined,
         photo: photoData || undefined,
         voice: voiceUri || undefined,
         voice_sample: voiceUri || undefined,
       });
-
-      console.log('Student enrollment API response:', response);
 
       if (response?.success) {
         setSuccessMessage('Biometric enrollment completed successfully!');

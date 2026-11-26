@@ -7,7 +7,7 @@ import {
   GraduationCap,
   BookOpen,
   User,
-  Scan,
+  ScanFace,
   BarChart3,
   Clock,
 } from 'lucide-react-native';
@@ -30,6 +30,48 @@ function NavTabButton({ tab, isActive, onPress }) {
   });
 
   const IconComponent = tab.IconComponent;
+  const isCenterPrimary = Boolean(tab.isCenterPrimary);
+
+  if (isCenterPrimary) {
+    return (
+      <TouchableOpacity
+        activeOpacity={0.82}
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={tab.label}
+        style={[
+          Platform.OS === 'web' ? { cursor: 'pointer' } : undefined,
+          { marginTop: -18, marginHorizontal: 2 },
+        ]}
+        className="items-center justify-center"
+      >
+        <Animated.View
+          style={{
+            width: 56,
+            height: 56,
+            borderRadius: 28,
+            alignItems: 'center',
+            justifyContent: 'center',
+            transform: [{ scale }],
+            backgroundColor: isActive ? '#2536C4' : '#3446D4',
+            borderWidth: 3,
+            borderColor: '#FFFFFF',
+            elevation: isActive ? 10 : 7,
+            shadowColor: '#3446D4',
+            shadowOffset: { width: 0, height: 5 },
+            shadowOpacity: isActive ? 0.45 : 0.3,
+            shadowRadius: 10,
+          }}
+        >
+          <IconComponent
+            size={24}
+            color="#ffffff"
+            strokeWidth={2.3}
+          />
+        </Animated.View>
+      </TouchableOpacity>
+    );
+  }
 
   return (
     <TouchableOpacity
@@ -52,9 +94,9 @@ function NavTabButton({ tab, isActive, onPress }) {
           },
           isActive
             ? {
-                backgroundColor: '#2563eb',
+                backgroundColor: '#3446D4',
                 elevation: 6,
-                shadowColor: '#2563eb',
+                shadowColor: '#3446D4',
                 shadowOffset: { width: 0, height: 4 },
                 shadowOpacity: 0.35,
                 shadowRadius: 8,
@@ -86,19 +128,19 @@ export default function BottomNav({ activeTab, onTabPress, user }) {
           IconComponent: Home,
         },
         {
-          id: 'admin_teachers',
-          label: 'Teachers',
+          id: 'users',
+          label: 'Teachers & students',
           IconComponent: Users,
-        },
-        {
-          id: 'admin_students',
-          label: 'Students',
-          IconComponent: GraduationCap,
         },
         {
           id: 'admin_courses',
           label: 'Courses',
           IconComponent: BookOpen,
+        },
+        {
+          id: 'profile',
+          label: 'Profile',
+          IconComponent: User,
         },
       ]
     : isTeacher
@@ -116,12 +158,18 @@ export default function BottomNav({ activeTab, onTabPress, user }) {
         {
           id: 'attendance',
           label: 'Scan',
-          IconComponent: Scan,
+          IconComponent: ScanFace,
+          isCenterPrimary: true,
         },
         {
           id: 'reports',
           label: 'Reports',
           IconComponent: BarChart3,
+        },
+        {
+          id: 'profile',
+          label: 'Profile',
+          IconComponent: User,
         },
       ]
     : [
@@ -143,23 +191,34 @@ export default function BottomNav({ activeTab, onTabPress, user }) {
       ];
 
   return (
-    <View className="px-5 pb-1 pt-1 bg-transparent items-center">
+    <View
+      pointerEvents="box-none"
+      style={{
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'transparent',
+        alignItems: 'center',
+        zIndex: 40,
+      }}
+      className="px-4 pb-1 pt-1"
+    >
       <View
         style={{
-          gap: 36,
+          gap: isTeacher ? 14 : isAdmin ? 22 : 36,
           elevation: 12,
           shadowColor: '#0f172a',
           shadowOffset: { width: 0, height: 6 },
-          shadowOpacity: 0.12,
+          shadowOpacity: 0.14,
           shadowRadius: 16,
-          marginBottom:20,
+          marginBottom: 16,
+          backgroundColor: '#ffffff',
         }}
-        className="bg-card border border-border/80 rounded-full py-2 px-5 flex-row items-center"
+        className="border border-slate-200/80 rounded-full py-2 px-4 flex-row items-center"
       >
         {tabs.map((tab) => {
-          const isActive =
-            activeTab === tab.id ||
-            (tab.id === 'admin_teachers' && activeTab === 'admin_teacher_assign');
+          const isActive = activeTab === tab.id;
 
           return (
             <NavTabButton

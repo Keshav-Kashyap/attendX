@@ -44,9 +44,8 @@ export default function AttendanceSessionStart({
     (selectedSubject?.semester_number ? `Semester ${selectedSubject.semester_number}` : null) ||
     (selectedCourse?.semester ? `Semester ${selectedCourse.semester}` : 'Semester 2');
   const displayBatch =
-    selectedCourse?.enrolled_students_count ||
-    selectedSubject?.enrolled_count ||
-    16;
+    selectedSubject?.enrolled_count ??
+    (selectedCourse?.enrolled_students_count || 16);
 
   const handleSelectBoth = (course, subject) => {
     onSelectCourse(course);
@@ -55,89 +54,96 @@ export default function AttendanceSessionStart({
   };
 
   return (
-    <View className="bg-card border border-border/80 rounded-2xl p-4 shadow-sm mb-4">
+    <View
+      className="bg-white border border-[#E6EAF2] rounded-[24px] p-4 mb-4"
+      style={{
+        shadowColor: '#0f172a',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.04,
+        shadowRadius: 8,
+        elevation: 2,
+      }}
+    >
       {/* Header with Live Status */}
-      <View className="flex-row items-center justify-between pb-3 border-b border-border/60 mb-3">
+      <View className="flex-row items-start justify-between mb-3.5">
         <View className="flex-1 mr-2">
           <View className="flex-row items-center gap-1.5">
-            <View className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <Text className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Attendance Session
+            <View className="w-2 h-2 rounded-full bg-[#16A34A]" />
+            <Text className="text-xs font-semibold text-[#15803D]">
+              Attendance session
             </Text>
           </View>
-          <Text className="text-base font-semibold text-foreground mt-0.5">
+          <Text className="text-[20px] font-bold text-[#0F172A] mt-1 leading-tight">
             {selectedSubject?.name || 'Select Lecture Class'}
           </Text>
         </View>
 
         <TouchableOpacity
-          activeOpacity={0.7}
+          activeOpacity={0.75}
           onPress={() => setShowClassPickerModal(true)}
-          className="px-3 py-1.5 rounded-xl bg-primary/10 border border-primary/20 flex-row items-center gap-1"
+          className="px-3.5 py-2 rounded-full bg-[#EEF2FF] flex-row items-center gap-1.5"
         >
-          <Icon name="refresh" size={13} color="#0066FF" />
-          <Text className="text-xs font-medium text-primary">Switch</Text>
+          <Icon name="refresh" size={14} color="#3446D4" />
+          <Text className="text-xs font-bold text-[#3446D4]">Switch</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Primary Details Row */}
-      <View className="bg-muted/30 rounded-xl p-3 border border-border/60 mb-3">
-        <View className="flex-row items-center justify-between mb-1.5">
-          <Text className="text-xs font-medium text-foreground flex-1 mr-2" numberOfLines={1}>
+      {/* Primary Details Box */}
+      <View className="bg-[#F8FAFC] rounded-2xl p-3.5 border border-[#EEF2F6] mb-3">
+        <View className="flex-row items-start justify-between mb-2">
+          <Text className="text-[14px] font-semibold text-[#1E293B] flex-1 mr-2 leading-snug" numberOfLines={2}>
             {selectedCourse?.name || 'Academic Degree Program'}
           </Text>
           {selectedSubject?.code ? (
-            <Badge variant="outline" className="px-1.5 py-0 bg-primary/10 border-primary/25">
-              <Text className="text-[10px] font-bold text-primary">{selectedSubject.code}</Text>
-            </Badge>
+            <View className="px-2.5 py-1 rounded-full bg-[#EEF2FF]">
+              <Text className="text-[11px] font-bold text-[#3446D4]">{selectedSubject.code}</Text>
+            </View>
           ) : null}
         </View>
 
-        <View className="flex-row items-center gap-3">
+        <View className="flex-row items-center flex-wrap gap-3">
           <View className="flex-row items-center gap-1">
-            <Icon name="school" size={12} color="#64748b" />
-            <Text className="text-[11px] text-muted-foreground font-medium">
+            <Icon name="school" size={13} color="#64748B" />
+            <Text className="text-xs text-[#64748B] font-medium">
               {selectedCourse?.code || 'MCAINT'}
             </Text>
           </View>
-          <Text className="text-[10px] text-muted-foreground">•</Text>
           <View className="flex-row items-center gap-1">
-            <Icon name="calendar" size={12} color="#64748b" />
-            <Text className="text-[11px] text-muted-foreground font-medium">
+            <Icon name="calendar" size={13} color="#64748B" />
+            <Text className="text-xs text-[#64748B] font-medium">
               {displaySemester}
             </Text>
           </View>
-          <Text className="text-[10px] text-muted-foreground">•</Text>
           <View className="flex-row items-center gap-1">
-            <Icon name="people" size={12} color="#64748b" />
-            <Text className="text-[11px] text-muted-foreground font-medium">
-              {displayBatch} Students
+            <Icon name="people" size={13} color="#64748B" />
+            <Text className="text-xs text-[#64748B] font-medium">
+              {displayBatch} students
             </Text>
           </View>
         </View>
       </View>
 
-      {/* Info Badges (Room & Schedule) */}
-      <View className="flex-row gap-2">
-        <View className="flex-1 p-2 bg-muted/20 rounded-xl border border-border/50 flex-row items-center gap-2">
-          <View className="w-6 h-6 rounded-lg bg-primary/10 items-center justify-center">
-            <Icon name="location" size={12} color="#0066FF" />
+      {/* Info Boxes (Room & Schedule) */}
+      <View className="flex-row gap-2.5">
+        <View className="flex-1 p-3 bg-[#F8FAFC] rounded-2xl border border-[#EEF2F6] flex-row items-center gap-2.5">
+          <View className="w-9 h-9 rounded-full bg-[#EEF2FF] items-center justify-center">
+            <Icon name="location" size={16} color="#3446D4" />
           </View>
           <View className="flex-1">
-            <Text className="text-[10px] text-muted-foreground font-medium">Lecture Room</Text>
-            <Text className="text-xs font-semibold text-foreground" numberOfLines={1}>
+            <Text className="text-[11px] text-[#64748B] font-medium">Lecture room</Text>
+            <Text className="text-[13px] font-bold text-[#0F172A] mt-0.5" numberOfLines={1}>
               {displayRoom}
             </Text>
           </View>
         </View>
 
-        <View className="flex-1 p-2 bg-muted/20 rounded-xl border border-border/50 flex-row items-center gap-2">
-          <View className="w-6 h-6 rounded-lg bg-emerald-500/10 items-center justify-center">
-            <Icon name="time" size={12} color="#10b981" />
+        <View className="flex-1 p-3 bg-[#F8FAFC] rounded-2xl border border-[#EEF2F6] flex-row items-center gap-2.5">
+          <View className="w-9 h-9 rounded-full bg-[#E6F7F5] items-center justify-center">
+            <Icon name="time" size={16} color="#0E8F83" />
           </View>
           <View className="flex-1">
-            <Text className="text-[10px] text-muted-foreground font-medium">Time Slot</Text>
-            <Text className="text-xs font-semibold text-foreground" numberOfLines={1}>
+            <Text className="text-[11px] text-[#64748B] font-medium">Time slot</Text>
+            <Text className="text-[13px] font-bold text-[#0F172A] mt-0.5" numberOfLines={1}>
               {selectedSubject?.schedule ? selectedSubject.schedule.split(' - ').slice(-1)[0] : 'Current Session'}
             </Text>
           </View>
@@ -235,7 +241,8 @@ export default function AttendanceSessionStart({
                                   </Badge>
                                 </View>
                                 <Text className="text-[11px] text-muted-foreground">
-                                  {sub.semester || (sub.semester_number ? `Semester ${sub.semester_number}` : 'Semester 2')} • {sub.room || 'Block B, Hall 3'}
+                                  {sub.semester || (sub.semester_number ? `Semester ${sub.semester_number}` : 'Semester 2')}
+                                  {sub.enrolled_count ? ` • ${sub.enrolled_count} Students` : ''} • {sub.room || 'Block B, Hall 3'}
                                 </Text>
                               </View>
 

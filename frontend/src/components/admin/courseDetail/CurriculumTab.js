@@ -1,5 +1,13 @@
-import React from 'react';
-import { View, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import {
+  View,
+  TouchableOpacity,
+  Modal,
+  ScrollView,
+  Pressable,
+  StyleSheet,
+  ActivityIndicator,
+} from 'react-native';
 import {
   GraduationCap,
   Calendar,
@@ -9,21 +17,28 @@ import {
   BookOpen,
   UserCheck,
   Plus,
+  X,
+  Check,
+  ArrowLeftRight,
 } from 'lucide-react-native';
 import { Text } from '../../ui/text';
 import { Skeleton, SkeletonCircle } from '../../ui/Skeleton';
 
 export default function CurriculumTab({
   course,
+  semesterObj = null,
   subjects = [],
+  teachers = [],
   isLoading = false,
+  isAssigningLead = false,
   activeSemester = '',
   onAddSubject,
   onDeleteSubject,
-  onAssignFaculty,
+  onAssignLeadTeacher,
   onViewTimetable,
   onSendMessage,
 }) {
+  const [showLeadModal, setShowLeadModal] = useState(false);
   if (isLoading) {
     return (
       <View className="mx-4 gap-4">
@@ -60,28 +75,24 @@ export default function CurriculumTab({
     );
   }
 
-  // Determine lead faculty from the loaded semester subjects
-  let leadTeacher = null;
-  for (const sub of subjects) {
-    if (sub.assigned_teachers && sub.assigned_teachers.length > 0) {
-      const at = sub.assigned_teachers[0];
-      leadTeacher = {
-        name: at.teacher_name || 'Assigned Faculty',
-        email: at.teacher_email || '',
-        room: at.room || sub.room || '',
-        schedule: at.schedule || sub.schedule || '',
-      };
-      break;
-    } else if (sub.teacher_name) {
-      leadTeacher = {
-        name: sub.teacher_name,
-        email: sub.teacher_email || '',
-        room: sub.room || '',
-        schedule: sub.schedule || '',
-      };
-      break;
-    }
-  }
+  // Strictly use the semester's Class Coordinator / Lead Teacher from the API
+  const coordTeacherId = semesterObj?.coordinator_teacher_id || null;
+  const coordTeacherName = semesterObj?.coordinator_teacher_name || null;
+
+  const matchedTeacherObj = coordTeacherId
+    ? (teachers || []).find((t) => t.id === coordTeacherId)
+    : null;
+
+  const leadTeacher =
+    coordTeacherId && coordTeacherName
+      ? {
+          id: coordTeacherId,
+          name: coordTeacherName,
+          email: matchedTeacherObj?.email || matchedTeacherObj?.user?.email || '',
+          qualification: matchedTeacherObj?.qualification || '',
+          specialization: matchedTeacherObj?.specialization || '',
+        }
+      : null;
 
   const teacherInitials = leadTeacher?.name
     ? leadTeacher.name
@@ -92,28 +103,48 @@ export default function CurriculumTab({
         .join('')
     : 'FL';
 
+  const handlePickTeacher = async (teacherId) => {
+    setShowLeadModal(false);
+    if (onAssignLeadTeacher) {
+      await onAssignLeadTeacher(teacherId);
+    }
+  };
+
   return (
     <View>
       <View className="mx-4 mb-3.5 bg-white rounded-3xl p-4 border border-slate-200/70 shadow-sm">
         {/* Top Header */}
         <View className="flex-row items-center justify-between mb-3">
           <Text className="text-[11px] font-medium text-[#007AFF] uppercase tracking-wider">
-            Faculty Lead {activeSemester ? `• ${activeSemester}` : ''}
+            Lead Teacher {activeSemester ? `• ${activeSemester}` : ''}
           </Text>
-          <View
-            className={`px-2.5 py-0.5 rounded-full border ${
-              leadTeacher
-                ? 'bg-emerald-50 border-emerald-200/70'
-                : 'bg-slate-100 border-slate-200/70'
-            }`}
-          >
-            <Text
-              className={`text-[10px] font-medium ${
-                leadTeacher ? 'text-emerald-700' : 'text-slate-500'
+          <View className="flex-row items-center gap-2">
+            {leadTeacher && (
+              <TouchableOpacity
+                activeOpacity={0.7}
+                disabled={isAssigningLead}
+                onPress={() => setShowLeadModal(true)}
+                className="px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-200/80 flex-row items-center gap-1"
+              >
+                <ArrowLeftRight size={10} color="#475569" />
+                <Text className="text-[10px] font-semibold text-slate-700">Change</Text>
+              </TouchableOpacity>
+            )}
+            <View
+              className={`px-2.5 py-0.5 rounded-full border ${
+                leadTeacher
+                  ? 'bg-emerald-50 border-emerald-200/70'
+                  : 'bg-slate-100 border-slate-200/70'
               }`}
             >
-              {leadTeacher ? 'Assigned' : 'Unassigned'}
-            </Text>
+              <Text
+                className={`text-[10px] font-medium ${
+                  leadTeacher ? 'text-emerald-700' : 'text-slate-500'
+                }`}
+              >
+                {leadTeacher ? 'Assigned' : 'Unassigned'}
+              </Text>
+            </View>
           </View>
         </View>
 
@@ -144,17 +175,9 @@ export default function CurriculumTab({
                   <View className="flex-row items-center gap-1">
                     <GraduationCap size={13} color="#64748b" />
                     <Text className="text-[11px] font-medium text-slate-500">
-                      {subjects.length} {subjects.length === 1 ? 'Subject' : 'Subjects'}
+                      Class Coordinator · {subjects.length} {subjects.length === 1 ? 'Subject' : 'Subjects'}
                     </Text>
                   </View>
-                  {leadTeacher.schedule ? (
-                    <View className="flex-row items-center gap-1">
-                      <Calendar size={13} color="#64748b" />
-                      <Text className="text-[11px] font-medium text-slate-500" numberOfLines={1}>
-                        {leadTeacher.schedule}
-                      </Text>
-                    </View>
-                  ) : null}
                 </View>
               </View>
             </View>
@@ -185,18 +208,25 @@ export default function CurriculumTab({
           <View className="py-2 items-center text-center">
             <UserCheck size={26} color="#94a3b8" />
             <Text className="text-sm font-medium text-slate-900 mt-2">
-              No Faculty Lead for {activeSemester || 'this Semester'}
+              No Lead Teacher for {activeSemester || 'this Semester'}
             </Text>
             <Text className="text-xs font-medium text-slate-500 text-center mt-1 mb-3">
-              Allocate a teacher to coordinate {activeSemester} subjects.
+              Assign a Class Coordinator to lead {activeSemester || 'this semester'}.
             </Text>
             <TouchableOpacity
               activeOpacity={0.7}
-              onPress={onAssignFaculty}
+              disabled={isAssigningLead}
+              onPress={() => setShowLeadModal(true)}
               className="bg-[#007AFF] px-4 py-2 rounded-full flex-row items-center gap-1.5"
             >
-              <Plus size={14} color="#ffffff" strokeWidth={2.4} />
-              <Text className="text-xs font-medium text-white">Assign Faculty</Text>
+              {isAssigningLead ? (
+                <ActivityIndicator size="small" color="#ffffff" />
+              ) : (
+                <>
+                  <Plus size={14} color="#ffffff" strokeWidth={2.4} />
+                  <Text className="text-xs font-medium text-white">Assign Lead Teacher</Text>
+                </>
+              )}
             </TouchableOpacity>
           </View>
         )}
@@ -302,6 +332,127 @@ export default function CurriculumTab({
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* ASSIGN LEAD TEACHER (CLASS COORDINATOR) MODAL */}
+      <Modal
+        visible={showLeadModal}
+        transparent
+        animationType="slide"
+        statusBarTranslucent
+        onRequestClose={() => setShowLeadModal(false)}
+      >
+        <View className="flex-1 bg-black/45 justify-end">
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => setShowLeadModal(false)}
+          />
+
+          <View className="bg-white rounded-t-[28px] max-h-[75%] border-t border-slate-100 shadow-2xl z-10">
+            <View className="flex-row items-center justify-between px-5 pt-4 pb-3 border-b border-slate-100">
+              <View>
+                <Text className="text-[17px] font-bold text-slate-900">
+                  Assign Lead Teacher
+                </Text>
+                <Text className="text-xs text-slate-500 mt-0.5">
+                  Class Coordinator for {course?.code} · {activeSemester}
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => setShowLeadModal(false)}
+                className="w-9 h-9 rounded-xl border border-slate-200 items-center justify-center bg-white"
+              >
+                <X size={18} color="#0F172A" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView
+              className="px-5 py-3"
+              contentContainerStyle={{ paddingBottom: 28 }}
+              showsVerticalScrollIndicator={false}
+            >
+              {leadTeacher && (
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={() => handlePickTeacher(null)}
+                  className="p-3.5 rounded-2xl border border-red-200 bg-red-50/60 mb-2.5 flex-row items-center justify-between"
+                >
+                  <View>
+                    <Text className="text-sm font-bold text-red-700">
+                      Remove Lead Teacher
+                    </Text>
+                    <Text className="text-xs text-red-500 mt-0.5">
+                      Unassign {leadTeacher.name} from {activeSemester}
+                    </Text>
+                  </View>
+                  <X size={16} color="#DC2626" />
+                </TouchableOpacity>
+              )}
+
+              {teachers && teachers.length > 0 ? (
+                teachers.map((t) => {
+                  const tName = t.name || t.user?.username || `Teacher #${t.id}`;
+                  const isCurrent = t.id === coordTeacherId;
+                  const isLeadingOther =
+                    Boolean(t.coordinator_semester_id) &&
+                    t.coordinator_semester_id !== semesterObj?.id;
+
+                  return (
+                    <TouchableOpacity
+                      key={t.id}
+                      activeOpacity={0.75}
+                      onPress={() => handlePickTeacher(t.id)}
+                      className={`p-3.5 rounded-2xl border mb-2 flex-row items-center justify-between ${
+                        isCurrent
+                          ? 'bg-blue-50 border-blue-300'
+                          : 'bg-white border-slate-200'
+                      }`}
+                    >
+                      <View className="flex-1 mr-3">
+                        <Text
+                          className={`text-sm font-bold ${
+                            isCurrent ? 'text-[#007AFF]' : 'text-slate-900'
+                          }`}
+                        >
+                          {tName}
+                        </Text>
+                        <Text
+                          className={`text-xs mt-0.5 ${
+                            isCurrent
+                              ? 'text-blue-600 font-semibold'
+                              : isLeadingOther
+                              ? 'text-amber-600 font-medium'
+                              : 'text-slate-400'
+                          }`}
+                        >
+                          {isCurrent
+                            ? `Current Lead for ${activeSemester}`
+                            : isLeadingOther
+                            ? `Currently Lead for ${t.coordinator_label || `Sem ${t.coordinator_semester_number}`}`
+                            : `${t.qualification || 'Faculty'} · ${t.specialization || 'Available'}`}
+                        </Text>
+                      </View>
+
+                      {isCurrent && (
+                        <View className="w-7 h-7 rounded-full bg-[#007AFF] items-center justify-center">
+                          <Check size={14} color="#FFFFFF" strokeWidth={3} />
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })
+              ) : (
+                <View className="py-8 items-center">
+                  <Text className="text-sm font-semibold text-slate-500">
+                    No teachers found
+                  </Text>
+                </View>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

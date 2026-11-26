@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { View, TextInput, TouchableOpacity } from 'react-native';
-import { Users, Search, X, Plus } from 'lucide-react-native';
+import { Users, Search, X, Plus, QrCode } from 'lucide-react-native';
 import { Text } from '../../ui/text';
 import { Skeleton, SkeletonCircle } from '../../ui/Skeleton';
 
@@ -10,6 +10,7 @@ export default function StudentsTab({
   isLoading = false,
   activeSemester = '',
   onEnrollBatch,
+  onShareInvite,
 }) {
   const [studentSearch, setStudentSearch] = useState('');
 
@@ -35,14 +36,26 @@ export default function StudentsTab({
               {activeSemester ? `in ${activeSemester}` : `in ${course?.code}`}
             </Text>
           </View>
-          <TouchableOpacity
-            activeOpacity={0.75}
-            onPress={onEnrollBatch}
-            className="bg-[#007AFF] px-3.5 py-2 rounded-full flex-row items-center gap-1"
-          >
-            <Plus size={14} color="#ffffff" strokeWidth={2.4} />
-            <Text className="text-xs font-medium text-white">Enroll Batch</Text>
-          </TouchableOpacity>
+          <View className="flex-row items-center gap-2">
+            {onShareInvite && (
+              <TouchableOpacity
+                activeOpacity={0.75}
+                onPress={onShareInvite}
+                className="bg-blue-50 border border-blue-200 px-3 py-2 rounded-full flex-row items-center gap-1"
+              >
+                <QrCode size={14} color="#2563EB" strokeWidth={2.2} />
+                <Text className="text-xs font-semibold text-blue-600">Invite QR</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              activeOpacity={0.75}
+              onPress={onEnrollBatch}
+              className="bg-[#007AFF] px-3.5 py-2 rounded-full flex-row items-center gap-1"
+            >
+              <Plus size={14} color="#ffffff" strokeWidth={2.4} />
+              <Text className="text-xs font-medium text-white">Enroll Batch</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View className="flex-row items-center bg-slate-100/80 rounded-2xl px-3 py-2.5">

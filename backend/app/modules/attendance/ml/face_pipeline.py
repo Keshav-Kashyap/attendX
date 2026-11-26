@@ -26,6 +26,29 @@ try:
 except ImportError:
     SVC = None
 
+# Optional OpenCV for multi-face detection in group photos
+HAS_CV2 = False
+_cv2_cascade = None
+try:
+    import cv2
+    HAS_CV2 = True
+except ImportError:
+    cv2 = None
+
+
+def load_cv2_cascade():
+    global _cv2_cascade
+    if not HAS_CV2 or cv2 is None:
+        return None
+    if _cv2_cascade is None:
+        try:
+            cascade_file = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
+            _cv2_cascade = cv2.CascadeClassifier(cascade_file)
+        except Exception as e:
+            print("Error loading OpenCV face cascade:", str(e))
+            _cv2_cascade = None
+    return _cv2_cascade
+
 # Cached model instances to avoid reloading heavy weights on every request
 _detector = None
 _sp = None
@@ -79,10 +102,7 @@ def base64_to_image_np(base64_str):
 
 
 def _fallback_face_feature_vector(image_np, dim=128):
-    """
-    Computes a 128-dimensional normalized image feature vector
-    from the central face region when dlib is not available.
-    """
+   
     try:
         h, w = image_np.shape[:2]
         # Crop central 60% of image where face is positioned in portrait
@@ -105,16 +125,14 @@ def _fallback_face_feature_vector(image_np, dim=128):
 
 
 def get_face_embeddings(image_np):
-    """
-    Detects faces in an image and extracts 128-d embeddings for each detected face.
-    Returns list of 128-d numpy arrays.
-    """
+   
     if image_np is None:
         return []
 
-    detector, sp, facerec = load_dlib_models()
     encodings = []
 
+    # Priority 1: Dlib face detector & recognition models
+    detector, sp, facerec = load_dlib_models()
     if detector is not None and sp is not None and facerec is not None:
         try:
             faces = detector(image_np, 1)
@@ -122,11 +140,46 @@ def get_face_embeddings(image_np):
                 shape = sp(image_np, face)
                 face_descriptor = facerec.compute_face_descriptor(image_np, shape, 1)
                 encodings.append(np.array(face_descriptor, dtype=np.float64))
-            return encodings
+            if encodings:
+                return encodings
         except Exception as e:
             print("Dlib face embedding computation error:", str(e))
 
-    # Fallback if dlib is not installed
+    # Priority 2: OpenCV Haar Cascade Multi-Face Detector for group photos
+    cascade = load_cv2_cascade()
+    if cascade is not None:
+        try:
+            if len(image_np.shape) == 3 and image_np.shape[2] >= 3:
+                gray = cv2.cvtColor(image_np[:, :, :3], cv2.COLOR_RGB2GRAY)
+            else:
+                gray = image_np
+
+            detected_boxes = cascade.detectMultiScale(
+                gray,
+                scaleFactor=1.1,
+                minNeighbors=4,
+                minSize=(28, 28)
+            )
+
+            if len(detected_boxes) > 0:
+                h_img, w_img = image_np.shape[:2]
+                for (x, y, w, h) in detected_boxes:
+                    pad_h = int(h * 0.1)
+                    pad_w = int(w * 0.1)
+                    y1 = max(0, y - pad_h)
+                    y2 = min(h_img, y + h + pad_h)
+                    x1 = max(0, x - pad_w)
+                    x2 = min(w_img, x + w + pad_w)
+                    face_crop = image_np[y1:y2, x1:x2]
+                    vec = _fallback_face_feature_vector(face_crop, dim=128)
+                    if vec is not None:
+                        encodings.append(vec)
+                if encodings:
+                    return encodings
+        except Exception as cv_err:
+            print("OpenCV multi-face detection notice:", str(cv_err))
+
+    # Priority 3: Fallback central face region if detector missed
     vec = _fallback_face_feature_vector(image_np, dim=128)
     if vec is not None:
         encodings.append(vec)
@@ -135,17 +188,7 @@ def get_face_embeddings(image_np):
 
 
 def extract_face_embedding(photo_input):
-    """
-    Extracts a 128-dimensional face embedding from a student profile photo.
-    
-    Accepts:
-        photo_input: base64 string or numpy array
-
-    Returns:
-        tuple (embedding_list, error_msg):
-            embedding_list: list of 128 floats, or None if failed
-            error_msg: str or None
-    """
+   
     if not photo_input:
         return None, "No photo provided."
 
@@ -181,6 +224,9 @@ def get_trained_model(students=None):
 
     for student in students:
         emb = getattr(student, "face_embedding", None)
+        if not emb:
+            # Jiski embedding nahi hai, wo check nahi hoga
+            continue
 
         # Case 1: stored as dict e.g. {"embedding": [...]}
         if isinstance(emb, dict) and "embedding" in emb:
@@ -195,17 +241,6 @@ def get_trained_model(students=None):
                 if len(sub_emb) == 128:
                     X.append(np.array(sub_emb, dtype=np.float64))
                     y.append(student.id)
-        else:
-            # Case 3: extract embedding from student profile photo if available
-            user_obj = getattr(student, "user", None)
-            profile_img = getattr(user_obj, "profile_image", None) if user_obj else None
-            if profile_img:
-                img_np = base64_to_image_np(profile_img)
-                if img_np is not None:
-                    detected_embs = get_face_embeddings(img_np)
-                    for d_emb in detected_embs:
-                        X.append(d_emb)
-                        y.append(student.id)
 
     model = None
     if len(X) > 0 and HAS_SKLEARN and SVC is not None:
@@ -253,34 +288,32 @@ def predict_attendence(class_image_np, students=None, model_data=None):
     if len(encodings) == 0 or len(X_train) == 0:
         return detected_students, all_students, len(encodings)
 
-    resemblance_threshold = 0.6
+    resemblance_threshold = 0.65
+    assigned_students = set()
 
     for encoding in encodings:
         predicted_id = None
+        best_match_score = float("inf")
 
-        # If SVC model is trained with >=2 classes, use model prediction
-        if model is not None and len(set(y_train)) >= 2:
-            try:
-                predicted_id = int(model.predict([encoding])[0])
-            except Exception:
-                predicted_id = None
-
-        # Verify predicted student embedding via Euclidean distance
-        if predicted_id is not None and predicted_id in y_train:
-            idx = y_train.index(predicted_id)
-            student_embedding = X_train[idx]
-            best_match_score = float(np.linalg.norm(student_embedding - encoding))
-        else:
-            # Nearest neighbor distance matching against all enrolled training vectors
-            distances = [float(np.linalg.norm(x - encoding)) for x in X_train]
-            min_idx = int(np.argmin(distances))
-            best_match_score = distances[min_idx]
-            predicted_id = int(y_train[min_idx])
+        # Nearest neighbor distance matching against all enrolled training vectors
+        distances = [float(np.linalg.norm(x - encoding)) for x in X_train]
+        if distances:
+            sorted_indices = np.argsort(distances)
+            for idx in sorted_indices:
+                cand_id = int(y_train[idx])
+                if cand_id not in assigned_students:
+                    predicted_id = cand_id
+                    best_match_score = distances[idx]
+                    break
+            if predicted_id is None:
+                predicted_id = int(y_train[sorted_indices[0]])
+                best_match_score = distances[sorted_indices[0]]
 
         # If distance is within facial recognition threshold, mark as recognized
         if best_match_score <= resemblance_threshold:
+            assigned_students.add(predicted_id)
             conf_val = round(
-                max(75.0, min(99.0, (1.0 - (best_match_score / resemblance_threshold)) * 24.0 + 75.0)),
+                max(82.0, min(99.0, (1.0 - (best_match_score / resemblance_threshold)) * 17.0 + 82.0)),
                 1,
             )
             detected_students[predicted_id] = {

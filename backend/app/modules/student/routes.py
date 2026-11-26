@@ -16,11 +16,18 @@ student_bp = APIRouter(
 
 
 class StudentProfileSchema(BaseModel):
+    name: Optional[str] = None
+    username: Optional[str] = None
+    email: Optional[str] = None
     roll_number: Optional[str] = None
     course_id: Optional[int] = None
+    course: Optional[str] = None
+    semester: Optional[str] = None
+    semester_number: Optional[int] = None
     phone: Optional[str] = None
     profile_image: Optional[str] = None
     photo: Optional[str] = None
+    photo_url: Optional[str] = None
     voice: Optional[str] = None
     voice_sample: Optional[str] = None
     face_embedding: Optional[Any] = None

@@ -1,7 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Switch } from 'react-native';
 import { Text } from '../../ui/text';
 import { Clock, CheckCircle2, AlertTriangle, ClipboardList } from 'lucide-react-native';
+import {
+  getNotificationPreferences,
+  updateNotificationPreferences,
+} from '../../../services/notificationService';
 
 export default function TabNotifications() {
   const [classReminders, setClassReminders] = useState(true);
@@ -10,8 +14,32 @@ export default function TabNotifications() {
   const [dailySummary, setDailySummary] = useState(false);
   const [savedNotice, setSavedNotice] = useState(false);
 
-  const handleToggle = (setter, val) => {
+  useEffect(() => {
+    let mounted = true;
+    getNotificationPreferences()
+      .then((res) => {
+        if (!mounted || !res?.data) return;
+        if (typeof res.data.class_reminders === 'boolean') {
+          setClassReminders(res.data.class_reminders);
+        }
+        if (typeof res.data.coordinator_alerts === 'boolean') {
+          setScanAlerts(res.data.coordinator_alerts);
+        }
+        if (typeof res.data.attendance_alerts === 'boolean') {
+          setAbsenteeAlerts(res.data.attendance_alerts);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const handleToggle = (setter, val, backendKey = null) => {
     setter(val);
+    if (backendKey) {
+      updateNotificationPreferences({ [backendKey]: val }).catch(() => {});
+    }
     setSavedNotice(true);
     setTimeout(() => setSavedNotice(false), 2000);
   };
@@ -19,23 +47,23 @@ export default function TabNotifications() {
   const notificationItems = [
     {
       title: 'Upcoming Class Reminders',
-      desc: 'Receive alerts 15 minutes before your scheduled lecture starts.',
+      desc: 'Receive FCM push alerts 5 minutes before your scheduled lecture starts.',
       value: classReminders,
-      toggle: (val) => handleToggle(setClassReminders, val),
+      toggle: (val) => handleToggle(setClassReminders, val, 'class_reminders'),
       IconComp: Clock,
     },
     {
-      title: 'AI Scan Processed Alerts',
-      desc: 'Confirmation when classroom face recognition completes and records are ready.',
+      title: 'Class Coordinator & Scan Alerts',
+      desc: 'Receive alerts when assigned as Class Coordinator or when scan records are ready.',
       value: scanAlerts,
-      toggle: (val) => handleToggle(setScanAlerts, val),
+      toggle: (val) => handleToggle(setScanAlerts, val, 'coordinator_alerts'),
       IconComp: CheckCircle2,
     },
     {
       title: 'Low Attendance Student Alerts',
       desc: 'Notify when a student drops below 75% attendance threshold.',
       value: absenteeAlerts,
-      toggle: (val) => handleToggle(setAbsenteeAlerts, val),
+      toggle: (val) => handleToggle(setAbsenteeAlerts, val, 'attendance_alerts'),
       IconComp: AlertTriangle,
     },
     {

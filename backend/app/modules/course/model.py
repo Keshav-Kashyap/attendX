@@ -57,11 +57,14 @@ class Semester(db.Model):
         return f"Semester {self.semester_number}"
 
     def to_dict(self, include_subjects=False):
+        coord_teacher = getattr(self, "class_coordinator", None)
         data = {
             "id": self.id,
             "course_id": self.course_id,
             "semester_number": self.semester_number,
             "academic_year": self.academic_year,
+            "coordinator_teacher_id": coord_teacher.id if coord_teacher else None,
+            "coordinator_teacher_name": coord_teacher.user.username if (coord_teacher and coord_teacher.user) else None,
             "subjects_count": len(self.subjects) if self.subjects else 0,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
@@ -142,7 +145,16 @@ class Subject(db.Model):
 
     @semester.setter
     def semester(self, value):
-        pass
+        if value:
+            import re
+            nums = re.findall(r"\d+", str(value))
+            if nums and self.course_id:
+                s_obj = Semester.query.filter(
+                    Semester.course_id == self.course_id,
+                    Semester.semester_number == int(nums[0])
+                ).first()
+                if s_obj:
+                    self.semester_id = s_obj.id
 
     def to_dict(self, include_course=True):
         primary_a = self.assignments[0] if getattr(self, "assignments", None) else None
@@ -306,7 +318,16 @@ class CourseEnrollment(db.Model):
 
     @semester.setter
     def semester(self, value):
-        pass
+        if value:
+            import re
+            nums = re.findall(r"\d+", str(value))
+            if nums and self.course_id:
+                s_obj = Semester.query.filter(
+                    Semester.course_id == self.course_id,
+                    Semester.semester_number == int(nums[0])
+                ).first()
+                if s_obj:
+                    self.semester_id = s_obj.id
 
     def to_dict(self):
         sem_name = self.semester

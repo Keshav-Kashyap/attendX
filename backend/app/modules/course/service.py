@@ -9,13 +9,6 @@ from fastapi.responses import JSONResponse
 
 
 def get_all_courses(teacher_id: int = None, user_id: int = None, role: str = None):
-    """
-    Returns limited course overview data:
-    - ID, name, code, description, duration, total_semesters
-    - semesters_count, subjects_count, enrolled_students_count
-    - semesters list (names only for badges)
-    Does NOT include full subjects array or deep nested semester objects.
-    """
     try:
         query = Course.query.order_by(Course.id.desc())
 
@@ -41,8 +34,8 @@ def get_all_courses(teacher_id: int = None, user_id: int = None, role: str = Non
 
         result = []
         for c in courses:
-            # Limited summary data only
-            c_dict = c.to_dict(include_subjects=False, include_semesters=False)
+            # Limited summary data with semester details for client dropdowns
+            c_dict = c.to_dict(include_subjects=False, include_semesters=True)
             result.append(c_dict)
 
         return JSONResponse(
@@ -63,10 +56,7 @@ def get_all_courses(teacher_id: int = None, user_id: int = None, role: str = Non
 
 
 def get_course_by_id(course_id: int, include_subjects: bool = False):
-    """
-    Returns single course overview with counts.
-    Subjects are excluded by default unless include_subjects=True.
-    """
+
     try:
         course = Course.query.filter(Course.id == course_id).first()
         if not course:
@@ -154,9 +144,6 @@ def get_course_semesters(course_id: int):
 
 
 def get_semester_subjects(semester_id: int):
-    """
-    Returns minimal subject list for a given semester_id directly from Semester/Subject.
-    """
     try:
         semester = Semester.query.filter(Semester.id == semester_id).first()
         if not semester:
@@ -204,9 +191,7 @@ def get_semester_subjects(semester_id: int):
 
 
 def get_course_subjects(course_id: int, semester_id: int = None, semester: str = None):
-    """
-    Returns subjects of a course, optionally filtered by semester.
-    """
+
     try:
         course = Course.query.filter(Course.id == course_id).first()
         if not course:
@@ -714,11 +699,6 @@ def get_course_students(course_id: int):
 # =========================================================================
 
 def get_teacher_assigned_courses(user_id: int):
-    """
-    Centralized method for teacher courses using the common Course module.
-    Returns assigned courses along with ONLY the teacher's assigned subjects,
-    schedule, room, semester info, and accurate enrolled student count.
-    """
     try:
         teacher = Teacher.query.filter(Teacher.user_id == user_id).first()
         if not teacher:
@@ -803,9 +783,22 @@ def get_teacher_assigned_courses(user_id: int):
             for s in assigned_subs:
                 sem_label = s.get("semester")
                 sem_num = s.get("semester_number")
+                sem_id = s.get("semester_id")
+                if sem_id:
+                    s_enr_cnt = CourseEnrollment.query.filter(
+                        CourseEnrollment.course_id == c.id,
+                        CourseEnrollment.semester_id == sem_id,
+                        CourseEnrollment.status == "active",
+                    ).count()
+                    if s_enr_cnt == 0:
+                        s_enr_cnt = Student.query.filter(Student.semester_id == sem_id).count()
+                    s["enrolled_count"] = s_enr_cnt
+                else:
+                    s["enrolled_count"] = active_enr_count
+
                 if sem_label and sem_label not in sem_map:
                     sem_map[sem_label] = {
-                        "id": s.get("semester_id"),
+                        "id": sem_id,
                         "semester_number": sem_num,
                         "name": sem_label,
                     }
@@ -830,9 +823,6 @@ def get_teacher_assigned_courses(user_id: int):
 
 
 def get_student_enrolled_courses(user_id: int):
-    """
-    Centralized method for student enrolled course(s) using the common Course module.
-    """
     try:
         student = Student.query.filter(Student.user_id == user_id).first()
         if not student:

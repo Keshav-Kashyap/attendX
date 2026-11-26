@@ -44,8 +44,30 @@ def update_user_profile(user_id: int, update_data: dict):
 
         if username:
             user.username = str(username).strip()
-        if profile_image:
-            user.profile_image = profile_image
+        if profile_image is not None:
+            if not profile_image:
+                user.profile_image = None
+                if getattr(user, "student_profile", None):
+                    user.student_profile.face_embedding = None
+            else:
+                photo_str = str(profile_image).strip()
+                if getattr(user, "student_profile", None):
+                    from app.modules.attendance.ml.face_pipeline import extract_face_embedding
+                    from app.utils.cloudinary import upload_image_to_cloudinary
+
+                    computed_face_emb, face_err = extract_face_embedding(photo_str)
+                    if computed_face_emb:
+                        user.student_profile.face_embedding = computed_face_emb
+
+                    clean_id = user.student_profile.roll_number or str(user.id)
+                    cloudinary_url = upload_image_to_cloudinary(
+                        photo_str,
+                        folder="attendx/students",
+                        public_id=f"student_{user.student_profile.id}_{clean_id}"
+                    )
+                    user.profile_image = cloudinary_url or photo_str
+                else:
+                    user.profile_image = photo_str
 
         db.session.commit()
 

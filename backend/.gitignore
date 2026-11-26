@@ -7,6 +7,8 @@ __pycache__/
 # Environment
 .env
 .env.*
+firebase-service-account.json
+*-firebase-adminsdk-*.json
 .venv/
 venv/
 

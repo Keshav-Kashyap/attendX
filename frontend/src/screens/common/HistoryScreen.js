@@ -58,20 +58,21 @@ export default function HistoryScreen({ user }) {
 
   return (
     <ScrollView
-      className="flex-1 bg-background px-5 pt-3 pb-10"
+      className="flex-1 bg-[#F5F6FA] px-4 pt-2"
+      contentContainerStyle={{ paddingBottom: 120 }}
       showsVerticalScrollIndicator={false}
       refreshControl={
         <RefreshControl
           refreshing={isRefetching}
           onRefresh={handleRefetch}
-          colors={['#0052cc']}
-          tintColor="#0052cc"
+          colors={['#3446D4']}
+          tintColor="#3446D4"
         />
       }
     >
       {/* Page Title */}
-      <View style={{ marginBottom: 16 }}>
-        <Text style={{ fontSize: 20, fontWeight: '900', color: '#0f172a' }}>
+      <View style={{ marginBottom: 12 }}>
+        <Text style={{ fontSize: 19, fontWeight: '600', color: '#0f172a' }}>
           {isTeacher ? 'Attendance Records' : 'Attendance History'}
         </Text>
         <Text style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
@@ -203,33 +204,33 @@ export default function HistoryScreen({ user }) {
           <View
             style={{
               backgroundColor: '#ffffff',
-              borderRadius: 22,
+              borderRadius: 20,
               borderWidth: 1,
-              borderColor: '#e2e8f0',
-              padding: 16,
-              marginBottom: 16,
+              borderColor: '#f1f5f9',
+              padding: 13,
+              marginBottom: 12,
               shadowColor: '#0f172a',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.04,
-              shadowRadius: 6,
-              elevation: 1,
+              shadowOffset: { width: 0, height: 3 },
+              shadowOpacity: 0.05,
+              shadowRadius: 10,
+              elevation: 2,
             }}
           >
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <View>
-                <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748b' }}>
+                <Text style={{ fontSize: 12, fontWeight: '500', color: '#64748b' }}>
                   Overall Ratio
                 </Text>
-                <Text style={{ fontSize: 24, fontWeight: '900', color: '#0f172a', marginTop: 2 }}>
+                <Text style={{ fontSize: 23, fontWeight: '600', color: '#0f172a', marginTop: 1 }}>
                   {summary?.attendance_percentage ?? 0}%
                 </Text>
               </View>
 
               <View
                 style={{
-                  paddingHorizontal: 12,
-                  paddingVertical: 5,
-                  borderRadius: 14,
+                  paddingHorizontal: 10,
+                  paddingVertical: 4,
+                  borderRadius: 12,
                   backgroundColor: (summary?.attendance_percentage ?? 0) >= 75 ? '#ecfdf5' : '#fef2f2',
                   borderWidth: 1,
                   borderColor: (summary?.attendance_percentage ?? 0) >= 75 ? '#a7f3d0' : '#fecaca',
@@ -245,8 +246,8 @@ export default function HistoryScreen({ user }) {
                 )}
                 <Text
                   style={{
-                    fontSize: 12,
-                    fontWeight: '800',
+                    fontSize: 11.5,
+                    fontWeight: '600',
                     color: (summary?.attendance_percentage ?? 0) >= 75 ? '#059669' : '#dc2626',
                   }}
                 >
@@ -255,22 +256,22 @@ export default function HistoryScreen({ user }) {
               </View>
             </View>
 
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#f1f5f9' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 10, paddingTop: 9, borderTopWidth: 1, borderTopColor: '#f1f5f9' }}>
               <Text style={{ fontSize: 12, color: '#64748b' }}>
                 Attended:{' '}
-                <Text style={{ fontWeight: '800', color: '#10b981' }}>
+                <Text style={{ fontWeight: '600', color: '#10b981' }}>
                   {summary?.attended_classes ?? 0}
                 </Text>
               </Text>
               <Text style={{ fontSize: 12, color: '#64748b' }}>
                 Conducted:{' '}
-                <Text style={{ fontWeight: '800', color: '#0f172a' }}>
+                <Text style={{ fontWeight: '600', color: '#0f172a' }}>
                   {summary?.total_classes ?? 0}
                 </Text>
               </Text>
               <Text style={{ fontSize: 12, color: '#64748b' }}>
                 Missed:{' '}
-                <Text style={{ fontWeight: '800', color: '#ef4444' }}>
+                <Text style={{ fontWeight: '600', color: '#ef4444' }}>
                   {summary?.absent_classes ?? 0}
                 </Text>
               </Text>
@@ -281,10 +282,10 @@ export default function HistoryScreen({ user }) {
           <View
             style={{
               flexDirection: 'row',
-              backgroundColor: '#f1f5f9',
-              borderRadius: 16,
-              padding: 4,
-              marginBottom: 16,
+              backgroundColor: '#e9ecf2',
+              borderRadius: 14,
+              padding: 3,
+              marginBottom: 12,
             }}
           >
             <TouchableOpacity
@@ -292,13 +293,13 @@ export default function HistoryScreen({ user }) {
               onPress={() => setActiveTab('subject_wise')}
               style={{
                 flex: 1,
-                paddingVertical: 9,
+                paddingVertical: 8,
                 alignItems: 'center',
-                borderRadius: 12,
+                borderRadius: 11,
                 backgroundColor: activeTab === 'subject_wise' ? '#ffffff' : 'transparent',
                 shadowColor: activeTab === 'subject_wise' ? '#0f172a' : 'transparent',
                 shadowOffset: { width: 0, height: 1 },
-                shadowOpacity: activeTab === 'subject_wise' ? 0.08 : 0,
+                shadowOpacity: activeTab === 'subject_wise' ? 0.06 : 0,
                 shadowRadius: 3,
                 elevation: activeTab === 'subject_wise' ? 1 : 0,
               }}
@@ -306,8 +307,8 @@ export default function HistoryScreen({ user }) {
               <Text
                 style={{
                   fontSize: 12,
-                  fontWeight: activeTab === 'subject_wise' ? '800' : '600',
-                  color: activeTab === 'subject_wise' ? '#0052cc' : '#64748b',
+                  fontWeight: activeTab === 'subject_wise' ? '600' : '500',
+                  color: activeTab === 'subject_wise' ? '#3446D4' : '#64748b',
                 }}
               >
                 Subject Breakdown
@@ -319,13 +320,13 @@ export default function HistoryScreen({ user }) {
               onPress={() => setActiveTab('sessions')}
               style={{
                 flex: 1,
-                paddingVertical: 9,
+                paddingVertical: 8,
                 alignItems: 'center',
-                borderRadius: 12,
+                borderRadius: 11,
                 backgroundColor: activeTab === 'sessions' ? '#ffffff' : 'transparent',
                 shadowColor: activeTab === 'sessions' ? '#0f172a' : 'transparent',
                 shadowOffset: { width: 0, height: 1 },
-                shadowOpacity: activeTab === 'sessions' ? 0.08 : 0,
+                shadowOpacity: activeTab === 'sessions' ? 0.06 : 0,
                 shadowRadius: 3,
                 elevation: activeTab === 'sessions' ? 1 : 0,
               }}
@@ -333,8 +334,8 @@ export default function HistoryScreen({ user }) {
               <Text
                 style={{
                   fontSize: 12,
-                  fontWeight: activeTab === 'sessions' ? '800' : '600',
-                  color: activeTab === 'sessions' ? '#0052cc' : '#64748b',
+                  fontWeight: activeTab === 'sessions' ? '600' : '500',
+                  color: activeTab === 'sessions' ? '#3446D4' : '#64748b',
                 }}
               >
                 Session Logs ({sessionRecords.length})
@@ -378,17 +379,17 @@ export default function HistoryScreen({ user }) {
                         key={item.id || idx}
                         style={{
                           backgroundColor: '#ffffff',
-                          borderRadius: 20,
+                          borderRadius: 18,
                           borderWidth: 1,
-                          borderColor: '#e2e8f0',
-                          padding: 14,
+                          borderColor: '#f1f5f9',
+                          padding: 12,
                           flexDirection: 'row',
                           alignItems: 'center',
                           shadowColor: '#0f172a',
-                          shadowOffset: { width: 0, height: 1 },
-                          shadowOpacity: 0.03,
-                          shadowRadius: 4,
-                          elevation: 1,
+                          shadowOffset: { width: 0, height: 2 },
+                          shadowOpacity: 0.04,
+                          shadowRadius: 8,
+                          elevation: 2,
                         }}
                       >
                         {/* Icon Indicator */}
@@ -418,19 +419,19 @@ export default function HistoryScreen({ user }) {
                             numberOfLines={1}
                             style={{
                               fontSize: 14,
-                              fontWeight: '800',
+                              fontWeight: '600',
                               color: '#0f172a',
-                              marginBottom: 2,
+                              marginBottom: 3,
                             }}
                           >
-                            {subjectCode ? `${subjectCode} ${subjectName}` : subjectName}
+                            {subjectCode ? `${subjectCode} · ${subjectName}` : subjectName}
                           </Text>
 
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
                             <Text style={{ fontSize: 11, color: '#64748b' }}>
-                              {dateStr} {timeStr ? `• ${timeStr}` : ''}
+                              {dateStr}{timeStr ? ` • ${timeStr}` : ''}
                             </Text>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
                               <MapPin size={10} color="#94a3b8" />
                               <Text style={{ fontSize: 11, color: '#94a3b8' }}>
                                 {room}
@@ -453,7 +454,7 @@ export default function HistoryScreen({ user }) {
                           <Text
                             style={{
                               fontSize: 11,
-                              fontWeight: '800',
+                              fontWeight: '600',
                               color: isPresent ? '#059669' : isNotHeld ? '#475569' : '#dc2626',
                             }}
                           >

@@ -4,6 +4,8 @@ import {
   ArrowLeft,
   ChevronRight,
   Layers,
+  Pencil,
+  Trash2,
 } from 'lucide-react-native';
 import { Text } from '../ui/text';
 import { Skeleton } from '../ui/Skeleton';
@@ -14,6 +16,9 @@ export default function CourseSemestersView({
   isLoading = false,
   onBack,
   onSelectSemester,
+  onEditCourse,
+  onDeleteCourse,
+  children,
 }) {
   if (!course) return null;
 
@@ -21,20 +26,42 @@ export default function CourseSemestersView({
 
   return (
     <View className="px-4 pt-3 pb-6">
-      {/* Navigation Breadcrumb */}
+      {/* Navigation Breadcrumb & Quick Actions */}
       <View className="flex-row items-center justify-between mb-3">
         <TouchableOpacity
           activeOpacity={0.7}
           onPress={onBack}
-          className="flex-row items-center gap-2"
+          className="flex-row items-center gap-2 flex-1 mr-2"
         >
           <ArrowLeft size={18} color="#2563eb" strokeWidth={2.5} />
-          <View className="flex-row items-center">
-            <Text className="text-sm font-bold text-slate-900">Courses</Text>
-            <Text className="text-sm font-medium text-slate-400 mx-1">/</Text>
-            <Text className="text-sm font-semibold text-slate-500">{course.code}</Text>
-          </View>
+          <Text className="text-sm font-bold text-slate-900" numberOfLines={1}>
+            {course.code}
+          </Text>
         </TouchableOpacity>
+
+        {/* Top-Right Quick Action Icons */}
+        <View className="flex-row items-center gap-1.5">
+          {onEditCourse && (
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={onEditCourse}
+              accessibilityLabel="Edit Course"
+              className="w-8 h-8 rounded-full bg-blue-50 border border-blue-200/80 items-center justify-center"
+            >
+              <Pencil size={14} color="#2563eb" strokeWidth={2.2} />
+            </TouchableOpacity>
+          )}
+          {onDeleteCourse && (
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={onDeleteCourse}
+              accessibilityLabel="Delete Course"
+              className="w-8 h-8 rounded-full bg-red-50 border border-red-200/80 items-center justify-center"
+            >
+              <Trash2 size={14} color="#ef4444" strokeWidth={2.2} />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       {/* Course Header Banner */}
@@ -63,7 +90,11 @@ export default function CourseSemestersView({
         </Text>
       </View>
 
-      {/* Section Title */}
+      {children ? (
+        children
+      ) : (
+        <>
+          {/* Section Title */}
       <View className="mb-3">
         <Text className="text-base font-medium text-slate-900">
           Select Semester
@@ -131,9 +162,23 @@ export default function CourseSemestersView({
                   {sem.students_count ?? 0} Students
                 </Text>
               </View>
+
+              {/* Lead Teacher / Coordinator */}
+              <Text
+                numberOfLines={1}
+                className={`text-[11px] mt-1.5 font-medium ${
+                  sem.coordinator_teacher_name ? 'text-blue-600' : 'text-slate-400'
+                }`}
+              >
+                {sem.coordinator_teacher_name
+                  ? `Lead: ${sem.coordinator_teacher_name}`
+                  : 'No Lead Assigned'}
+              </Text>
             </TouchableOpacity>
           ))}
         </View>
+      )}
+        </>
       )}
     </View>
   );

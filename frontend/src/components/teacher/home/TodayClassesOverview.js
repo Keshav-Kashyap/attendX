@@ -79,69 +79,49 @@ export default function TodayClassesOverview({
   const rateProgress = Math.min(100, Math.max(0, Number(avgRate) || 0));
   const auditProgress = auditsCount > 0 ? Math.min(100, auditsCount * 33) : 5;
 
+  const cardShadow = {
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 3,
+  };
+
   return (
-    <View className="flex-row gap-2.5 mb-5">
-      <StatCard
-        title="Lectures"
-        value={`${completedAttendance}/${totalClasses}`}
-        icon={BookOpen}
-        iconColor="#0284c7"
-        description={
-          totalClasses === 0
-            ? 'No classes today'
-            : classesLeft === 0
-            ? 'All done'
-            : `${classesLeft} left`
-        }
+    <View className="flex-row gap-3 mb-5">
+      <TouchableOpacity
+        activeOpacity={0.82}
         onPress={onNavigateTab ? () => onNavigateTab('classes') : undefined}
-        className="flex-1 bg-card border border-border/80 rounded-2xl p-3.5 shadow-sm justify-between"
-        valueClassName="text-xl font-bold text-foreground mt-0.5"
+        style={cardShadow}
+        className="flex-1 bg-white border border-slate-100 rounded-[22px] p-4 justify-between"
       >
-        <View className="h-1 w-full bg-slate-200 rounded-full mt-2 overflow-hidden">
-          <View
-            style={{ width: `${lectureProgress}%`, backgroundColor: '#0284c7' }}
-            className="h-full rounded-full"
-          />
+        <View className="w-10 h-10 rounded-xl bg-[#EEF2FF] items-center justify-center mb-3">
+          <BookOpen size={19} color="#3446D4" />
         </View>
-      </StatCard>
+        <Text className="text-[24px] font-semibold text-slate-900 tracking-tight leading-tight">
+          {completedAttendance}/{totalClasses}
+        </Text>
+        <Text className="text-[13px] font-normal text-slate-500 mt-0.5">
+          Lectures · {totalClasses === 0 ? 'No classes' : classesLeft === 0 ? 'All done' : `${classesLeft} left`}
+        </Text>
+      </TouchableOpacity>
 
-      <StatCard
-        title="Avg. Rate"
-        value={avgRate > 0 ? `${avgRate}%` : '0%'}
-        icon={PieChart}
-        iconColor="#8b5cf6"
-        description={totalSessions > 0 ? `${totalSessions} sessions` : 'No sessions yet'}
+      <TouchableOpacity
+        activeOpacity={0.82}
         onPress={onNavigateTab ? () => onNavigateTab('reports') : undefined}
-        className="flex-1 bg-card border border-border/80 rounded-2xl p-3.5 shadow-sm justify-between"
-        valueClassName="text-xl font-bold text-foreground mt-0.5"
+        style={cardShadow}
+        className="flex-1 bg-white border border-slate-100 rounded-[22px] p-4 justify-between"
       >
-        <View className="h-1 w-full bg-slate-200 rounded-full mt-2 overflow-hidden">
-          <View
-            style={{ width: `${rateProgress}%`, backgroundColor: '#8b5cf6' }}
-            className="h-full rounded-full"
-          />
+        <View className="w-10 h-10 rounded-xl bg-[#EDE9FE] items-center justify-center mb-3">
+          <PieChart size={19} color="#7C3AED" />
         </View>
-      </StatCard>
-
-      <StatCard
-        title="Audits"
-        value={auditsCount}
-        icon={Shield}
-        iconColor="#ef4444"
-        description={
-          auditNote || (auditsCount > 0 ? `${auditsCount} flagged` : 'All regular')
-        }
-        onPress={onNavigateTab ? () => onNavigateTab('reports') : undefined}
-        className="flex-1 bg-card border border-border/80 rounded-2xl p-3.5 shadow-sm justify-between"
-        valueClassName="text-xl font-bold text-foreground mt-0.5"
-      >
-        <View className="h-1 w-full bg-slate-200 rounded-full mt-2 overflow-hidden">
-          <View
-            style={{ width: `${auditProgress}%`, backgroundColor: '#ef4444' }}
-            className="h-full rounded-full"
-          />
-        </View>
-      </StatCard>
+        <Text className="text-[24px] font-semibold text-slate-900 tracking-tight leading-tight">
+          {avgRate > 0 ? `${avgRate}%` : '0%'}
+        </Text>
+        <Text className="text-[13px] font-normal text-slate-500 mt-0.5">
+          Avg. Rate · {totalSessions > 0 ? `${totalSessions} sessions` : 'No sessions'}
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 }

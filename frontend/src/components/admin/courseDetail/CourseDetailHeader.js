@@ -22,17 +22,9 @@ export default function CourseDetailHeader({
         <View className="w-8 h-8 rounded-full bg-white border border-slate-200/70 items-center justify-center shadow-xs">
           <ArrowLeft size={16} color="#007AFF" strokeWidth={2.2} />
         </View>
-        <View className="flex-row items-center flex-wrap flex-1">
-          <Text className="text-sm font-medium text-slate-900">Courses</Text>
-          <Text className="text-sm font-medium text-slate-300 mx-1.5">/</Text>
-          <Text className="text-sm font-medium text-slate-500">{courseCode}</Text>
-          {semesterName ? (
-            <>
-              <Text className="text-sm font-medium text-slate-300 mx-1.5">/</Text>
-              <Text className="text-sm font-medium text-[#007AFF]">{semesterName}</Text>
-            </>
-          ) : null}
-        </View>
+        <Text className="text-sm font-semibold text-slate-800" numberOfLines={1}>
+          {semesterName || courseCode}
+        </Text>
       </TouchableOpacity>
 
       {/* Right Actions: Pin & Share */}

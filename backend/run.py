@@ -1,3 +1,4 @@
+import asyncio
 import os
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
@@ -13,10 +14,12 @@ from app.modules.users.model import User
 from app.modules.student.model import Student
 from app.modules.teacher.model import Teacher, TeacherAssignment
 from app.modules.attendance.model import AttendanceSession, AttendanceRecord
+from app.modules.notifications.model import DeviceToken, NotificationPreference, NotificationLog
 
 # Database
 from app.config.database import connect_db
 from app.modules.course.service import seed_default_courses_if_empty
+from app.modules.notifications.scheduler import run_class_reminder_scheduler
 
 # Routers
 from app.modules.auth.routes import auth_bp
@@ -25,13 +28,22 @@ from app.modules.teacher.routes import teacher_bp
 from app.modules.course.routes import course_bp
 from app.modules.attendance.routes import attendance_bp
 from app.modules.admin import admin_bp, seed_default_admin_if_empty
+from app.modules.notifications import notifications_bp
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     connect_db()
     seed_default_admin_if_empty()
-    yield
+    scheduler_task = asyncio.create_task(run_class_reminder_scheduler())
+    try:
+        yield
+    finally:
+        scheduler_task.cancel()
+        try:
+            await scheduler_task
+        except asyncio.CancelledError:
+            pass
 
 
 app = FastAPI(
@@ -70,6 +82,7 @@ app.include_router(teacher_bp)
 app.include_router(course_bp)
 app.include_router(attendance_bp)
 app.include_router(admin_bp)
+app.include_router(notifications_bp)
 
 @app.get("/")
 def root():

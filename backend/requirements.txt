@@ -12,3 +12,5 @@ Pillow
 numpy
 scikit-learn
 cloudinary
+dotenv
+firebase-admin

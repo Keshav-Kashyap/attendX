@@ -1,37 +1,35 @@
 import React, { useState } from 'react';
-import { View, TouchableOpacity, Modal, Pressable, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
+import { View, TouchableOpacity, Modal, Pressable, StyleSheet, Platform, StatusBar } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Bell, X, CheckCircle2 } from 'lucide-react-native';
 import { Text } from '../text';
-import { Avatar, AvatarImage } from '../avatar';
 import { useUser } from '../../../hooks/useUser';
 
 const Welcome = ({
   user: userProp,
   role: roleProp,
   title,
-  subtitle,
   showDate = true,
   rightAction,
-  onAvatarPress,
   onNotificationPress,
   unreadCount = 0,
   notifications = [],
   className = '',
 }) => {
-  const router = useRouter();
   const { user: globalUser, role: globalRole } = useUser();
+  const insets = useSafeAreaInsets();
+  const topInset =
+    Platform.OS === 'web'
+      ? 0
+      : insets?.top || (Platform.OS === 'android' ? StatusBar.currentHeight || 24 : 44);
   const user = userProp || globalUser;
   const role = (roleProp || user?.role || globalRole || 'admin').toLowerCase();
   const [showNotifications, setShowNotifications] = useState(false);
 
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening';
   const todayDateStr = new Date().toLocaleDateString('en-GB', {
-    weekday: 'long',
+    weekday: 'short',
     day: 'numeric',
     month: 'short',
-    year: 'numeric',
   });
 
   // Extract first name (or full name for teachers) with role fallback
@@ -49,47 +47,6 @@ const Welcome = ({
       ? trimmedName || 'Teacher'
       : firstName;
 
-  const initials = rawName
-    ? rawName
-        .trim()
-        .split(/\s+/)
-        .filter(Boolean)
-        .slice(0, 2)
-        .map((part) => part[0].toUpperCase())
-        .join('')
-    : firstName.charAt(0).toUpperCase();
-
-  const avatarUri =
-    user?.profile_image ||
-    user?.photo_url ||
-    user?.student_profile?.profile_image ||
-    user?.teacher_profile?.profile_image ||
-    null;
-
-  // Role-based default subtitle
-  const defaultSubtitle = (() => {
-    switch (role) {
-      case 'admin':
-        return 'Institution Curriculum & Attendance Overview';
-      case 'teacher':
-        return 'Faculty Attendance & Schedule Overview';
-      case 'student':
-        return 'Academic Progress & Attendance Overview';
-      default:
-        return 'Academic & Attendance Overview';
-    }
-  })();
-
-  const displaySubtitle = subtitle !== undefined ? subtitle : defaultSubtitle;
-
-  const handleProfilePress = () => {
-    if (onAvatarPress) {
-      onAvatarPress();
-      return;
-    }
-    router.push('/profile');
-  };
-
   const handleBellPress = () => {
     if (onNotificationPress) {
       onNotificationPress();
@@ -99,66 +56,58 @@ const Welcome = ({
   };
 
   return (
-    <View className={`mb-4 ${className}`.trim()}>
-      <View className={`flex-row justify-between ${role === 'teacher' ? 'items-start' : 'items-center'}`}>
-        {/* Left Greeting + Subtitle */}
-        <View className="flex-1 mr-3">
-          <Text
-            className="text-xl font-medium text-foreground tracking-tight leading-snug"
-            numberOfLines={role === 'teacher' ? undefined : 1}
-          >
-            {title || `${greeting}, ${displayName}`}
-          </Text>
-          {displaySubtitle ? (
+    <View className={className}>
+      <View
+        style={{
+          backgroundColor: '#3446D4',
+          borderBottomLeftRadius: 28,
+          borderBottomRightRadius: 28,
+          paddingHorizontal: 20,
+          paddingTop: topInset + 16,
+          paddingBottom: 56,
+        }}
+      >
+        <View className="flex-row items-center justify-between">
+          {/* Left Date + Greeting */}
+          <View className="flex-1 mr-3">
+            {showDate ? (
+              <Text
+                style={{ color: 'rgba(255,255,255,0.82)' }}
+                className="text-xs font-medium"
+                numberOfLines={1}
+              >
+                {todayDateStr}
+              </Text>
+            ) : null}
             <Text
-              className="text-xs font-medium text-muted-foreground mt-0.5"
+              className="text-[21px] font-semibold text-white tracking-tight leading-snug mt-0.5"
               numberOfLines={role === 'teacher' ? 2 : 1}
             >
-              {showDate ? `${todayDateStr} • ` : ''}{displaySubtitle}
+              {title || `Welcome back, ${displayName}`}
             </Text>
-          ) : showDate ? (
-            <Text className="text-xs font-medium text-muted-foreground mt-0.5" numberOfLines={1}>
-              {todayDateStr}
-            </Text>
-          ) : null}
-        </View>
+          </View>
 
-        {/* Right Actions: Optional custom slot + Notification Bell + Profile Avatar */}
-        <View className="flex-row items-center gap-2">
-          {rightAction ? (
-            <View className="items-center justify-center">
-              {rightAction}
-            </View>
-          ) : null}
-
-          <TouchableOpacity
-            activeOpacity={0.75}
-            onPress={handleBellPress}
-            accessibilityLabel="Notifications"
-            className="w-10 h-10 rounded-full bg-white border border-slate-200/80 items-center justify-center shadow-xs relative"
-          >
-            <Bell size={18} color="#334155" strokeWidth={2} />
-            {unreadCount > 0 ? (
-              <View className="absolute top-2 right-2.5 w-2 h-2 rounded-full bg-red-500 border border-white" />
+          {/* Right Actions: Optional custom slot + Rounded-Square Notification Bell (No Profile Avatar) */}
+          <View className="flex-row items-center gap-2">
+            {rightAction ? (
+              <View className="items-center justify-center">
+                {rightAction}
+              </View>
             ) : null}
-          </TouchableOpacity>
 
-          <TouchableOpacity
-            activeOpacity={0.75}
-            onPress={handleProfilePress}
-            accessibilityLabel="Open Profile"
-            className="rounded-full"
-          >
-            <Avatar className="h-10 w-10 border border-slate-200/80 bg-[#007AFF]/10">
-              {avatarUri ? (
-                <AvatarImage source={{ uri: avatarUri }} />
-              ) : (
-                <View className="h-full w-full items-center justify-center rounded-full bg-[#007AFF]/10">
-                  <Text className="text-xs font-medium text-[#007AFF]">{initials}</Text>
-                </View>
-              )}
-            </Avatar>
-          </TouchableOpacity>
+            <TouchableOpacity
+              activeOpacity={0.75}
+              onPress={handleBellPress}
+              accessibilityLabel="Notifications"
+              style={{ backgroundColor: 'rgba(255,255,255,0.16)' }}
+              className="w-11 h-11 rounded-2xl items-center justify-center relative"
+            >
+              <Bell size={20} color="#ffffff" strokeWidth={2} />
+              {unreadCount > 0 ? (
+                <View className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-red-500 border border-white" />
+              ) : null}
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
 

@@ -15,7 +15,8 @@ export default function TeacherReportsTab({ user }) {
 
   return (
     <ScrollView
-      className="flex-1 px-4 pt-3 pb-8"
+      className="flex-1 px-4 pt-3"
+      contentContainerStyle={{ paddingBottom: 120 }}
       showsVerticalScrollIndicator={false}
       refreshControl={
         <RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor="#0284c7" />

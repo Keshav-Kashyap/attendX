@@ -246,6 +246,28 @@ export function useCreateTeacher() {
   });
 }
 
+export function useUpdateTeacher() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ teacherId, data }) => adminApi.updateTeacher(teacherId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ADMIN_KEYS.teachers });
+      queryClient.invalidateQueries({ queryKey: ['admin'] });
+    },
+  });
+}
+
+export function useDeleteTeacher() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (teacherId) => adminApi.deleteTeacher(teacherId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ADMIN_KEYS.teachers });
+      queryClient.invalidateQueries({ queryKey: ADMIN_KEYS.stats });
+    },
+  });
+}
+
 export function useAdminStudents(params = {}, options = {}) {
   const user = useAuthStore((state) => state.user);
   const isAdmin = user?.role === 'admin';
@@ -267,6 +289,30 @@ export function useCreateStudent() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data) => adminApi.createStudent(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'students'] });
+      queryClient.invalidateQueries({ queryKey: ADMIN_KEYS.courses });
+      queryClient.invalidateQueries({ queryKey: ADMIN_KEYS.stats });
+    },
+  });
+}
+
+export function useUpdateStudent() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ studentId, data }) => adminApi.updateStudent(studentId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'students'] });
+      queryClient.invalidateQueries({ queryKey: ADMIN_KEYS.courses });
+      queryClient.invalidateQueries({ queryKey: ADMIN_KEYS.stats });
+    },
+  });
+}
+
+export function useDeleteStudent() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (studentId) => adminApi.deleteStudent(studentId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'students'] });
       queryClient.invalidateQueries({ queryKey: ADMIN_KEYS.courses });

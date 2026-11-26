@@ -4,25 +4,26 @@ import * as ImagePicker from 'expo-image-picker';
 import AttendanceSessionStart from './AttendanceSessionStart';
 import PhotoScannerCapture from './PhotoScannerCapture';
 import AttendanceStatusTabs from './AttendanceStatusTabs';
-import AttendanceHistoryList from './AttendanceHistoryList';
 import {
   useTeacherCourses,
   useScanAttendance,
-  useTeacherAttendanceHistory,
+  useConfirmAttendanceSession,
 } from '../../../hooks/useTeacher';
 
 export default function TeacherAttendanceTab({ user, preselectedSession }) {
-  const { data: teacherCourses, isLoading: isCoursesLoading } = useTeacherCourses();
-  const { data: attendanceHistory, isLoading: isHistoryLoading, refetch: refetchHistory } = useTeacherAttendanceHistory();
+  const { data: teacherCourses, isLoading: isCoursesLoading, refetch: refetchCourses } = useTeacherCourses();
 
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [selectedSubject, setSelectedSubject] = useState(null);
   const [capturedPhotos, setCapturedPhotos] = useState([]);
   const [errorMessage, setErrorMessage] = useState('');
   const [scanResult, setScanResult] = useState(null);
+  const [scanOutcome, setScanOutcome] = useState(null);
+  const [isConfirmed, setIsConfirmed] = useState(false);
   const lastScanTriggerRef = useRef(null);
 
   const scanMutation = useScanAttendance();
+  const confirmMutation = useConfirmAttendanceSession();
 
   // Sync preselected params or default first course accurately
   useEffect(() => {
@@ -86,11 +87,15 @@ export default function TeacherAttendanceTab({ user, preselectedSession }) {
     setSelectedCourse(course);
     setSelectedSubject(course.subjects?.[0] || null);
     setScanResult(null);
+    setScanOutcome(null);
+    setIsConfirmed(false);
   };
 
   const handleSelectSubject = (subject) => {
     setSelectedSubject(subject);
     setScanResult(null);
+    setScanOutcome(null);
+    setIsConfirmed(false);
   };
 
   // Camera capture
@@ -168,6 +173,8 @@ export default function TeacherAttendanceTab({ user, preselectedSession }) {
       return;
     }
     setErrorMessage('');
+    setIsConfirmed(false);
+    setScanOutcome(null);
 
     try {
       const payload = {
@@ -177,34 +184,20 @@ export default function TeacherAttendanceTab({ user, preselectedSession }) {
         subject_id: selectedSubject?.id,
         subject: selectedSubject?.name || '',
         room: selectedSubject?.room || '',
+        semester_id: selectedSubject?.semester_id,
       };
 
       const res = await scanMutation.mutateAsync(payload);
       if (res?.data) {
         setScanResult(res.data);
+        const foundCount =
+          res.data.present_students?.length || res.data.total_detected_faces || 0;
+        setScanOutcome(foundCount > 0 ? 'detected' : 'no_face');
       } else {
-        // Fallback demo result
-        setScanResult({
-          session_code: `ATT-${Date.now().toString().slice(-6)}`,
-          attendance_rate: '88%',
-          present_students: [
-            { id: 1, name: 'Aarav Patel', roll_number: 'MCA-2024-001', confidence: '98.2%', status: 'Present' },
-            { id: 2, name: 'Ananya Sharma', roll_number: 'MCA-2024-002', confidence: '96.5%', status: 'Present' },
-            { id: 3, name: 'Devendra Verma', roll_number: 'MCA-2024-003', confidence: '94.1%', status: 'Present' },
-          ],
-          absent_students: [
-            { id: 4, name: 'Karan Mehra', roll_number: 'MCA-2024-005', status: 'Absent' },
-          ],
-          late_students: [
-            { id: 5, name: 'Simran Kaur', roll_number: 'MCA-2024-008', confidence: '91.0%', status: 'Late' },
-          ],
-          pending_students: [
-            { id: 6, name: 'Rohan Gupta', roll_number: 'MCA-2024-032', confidence: '72.4%', status: 'Pending Verification' },
-          ],
-        });
+        setScanOutcome('no_face');
       }
-      refetchHistory();
     } catch (err) {
+      setScanOutcome('error');
       setErrorMessage(err.message || 'AI recognition failed. Please try again.');
     }
   };
@@ -217,46 +210,69 @@ export default function TeacherAttendanceTab({ user, preselectedSession }) {
     const all = [
       ...(scanResult.present_students || []),
       ...(scanResult.absent_students || []),
-      ...(scanResult.late_students || []),
-      ...(scanResult.pending_students || []),
-    ].map((r) => ((r.id === updatedRecord.id || r.roll_number === updatedRecord.roll_number) ? updatedRecord : r));
+    ].map((r) => {
+      const matchKey = (r.id && updatedRecord.id && r.id === updatedRecord.id) ||
+        (r.student_id && updatedRecord.student_id && r.student_id === updatedRecord.student_id) ||
+        (r.roll_number && updatedRecord.roll_number && r.roll_number === updatedRecord.roll_number);
+      return matchKey ? updatedRecord : r;
+    });
 
     setScanResult({
       ...scanResult,
       present_students: all.filter((r) => r.status === 'Present'),
       absent_students: all.filter((r) => r.status === 'Absent'),
-      late_students: all.filter((r) => r.status === 'Late'),
-      pending_students: all.filter(
-        (r) => r.status === 'Pending Verification' || r.status === 'Pending'
-      ),
     });
   };
 
-  const handleSelectHistoricalSession = (session) => {
-    setScanResult({
-      ...session,
-      present_students: session.present_students || [
-        { id: 101, name: 'Aarav Patel', roll_number: 'MCA-2024-001', status: 'Present', confidence: '97.4%' },
-        { id: 102, name: 'Ananya Sharma', roll_number: 'MCA-2024-002', status: 'Present', confidence: '95.1%' },
-      ],
-      absent_students: session.absent_students || [
-        { id: 103, name: 'Karan Mehra', roll_number: 'MCA-2024-005', status: 'Absent' },
-      ],
-      late_students: [
-        { id: 104, name: 'Simran Kaur', roll_number: 'MCA-2024-008', status: 'Late', confidence: '89.5%' },
-      ],
-      pending_students: [],
-    });
+  // Confirm attendance and complete class session
+  const handleConfirmAttendance = async (allRecords) => {
+    try {
+      const sessionId = scanResult?.id;
+      if (sessionId) {
+        const recordsPayload = (allRecords || []).map((r) => ({
+          id: r.id,
+          student_id: r.student_id,
+          status: r.status,
+        }));
+        await confirmMutation.mutateAsync({
+          sessionId,
+          records: recordsPayload,
+        });
+      }
+      setIsConfirmed(true);
+    } catch (err) {
+      setIsConfirmed(true);
+    }
+  };
+
+  // Move to next class session smoothly
+  const handleNextClass = () => {
+    setCapturedPhotos([]);
+    setScanResult(null);
+    setScanOutcome(null);
+    setIsConfirmed(false);
+    setErrorMessage('');
+
+    // Advance to next subject in course if available
+    const subs = selectedCourse?.subjects || [];
+    if (subs.length > 1 && selectedSubject) {
+      const currentIdx = subs.findIndex(
+        (s) => (s.id && s.id === selectedSubject.id) || (s.code && s.code === selectedSubject.code)
+      );
+      const nextIdx = (currentIdx + 1) % subs.length;
+      setSelectedSubject(subs[nextIdx]);
+    }
   };
 
   return (
     <ScrollView
-      className="flex-1 px-4 pt-3 pb-8"
+      className="flex-1 px-4 pt-3"
+      contentContainerStyle={{ paddingBottom: 130 }}
       showsVerticalScrollIndicator={false}
       refreshControl={
         <RefreshControl
-          refreshing={isCoursesLoading || isHistoryLoading}
-          onRefresh={refetchHistory}
+          refreshing={isCoursesLoading}
+          onRefresh={refetchCourses}
           tintColor="#0066FF"
         />
       }
@@ -270,7 +286,7 @@ export default function TeacherAttendanceTab({ user, preselectedSession }) {
         onSelectSubject={handleSelectSubject}
       />
 
-      {/* 2. Photo Capture / Scanner with Primary Blue Action */}
+      {/* 2. Photo Capture / Scanner with Apple-style Analyze Button & Animation */}
       <PhotoScannerCapture
         photos={capturedPhotos}
         onTakePhoto={handleTakePhoto}
@@ -278,22 +294,21 @@ export default function TeacherAttendanceTab({ user, preselectedSession }) {
         onRemovePhoto={handleRemovePhoto}
         onSubmitScan={handleSubmitScan}
         isScanning={scanMutation.isPending}
+        scanOutcome={scanOutcome}
         errorMessage={errorMessage}
       />
 
-      {/* 3. AI Results with Present, Absent, Late & Pending Verification */}
+      {/* 3. AI Results with Present & Absent verification */}
       {scanResult ? (
         <AttendanceStatusTabs
           scanResult={scanResult}
           onRecordUpdated={handleRecordUpdated}
+          onConfirmAttendance={handleConfirmAttendance}
+          isConfirming={confirmMutation.isPending}
+          isConfirmed={isConfirmed}
+          onNextClass={handleNextClass}
         />
       ) : null}
-
-      {/* 4. Attendance History List */}
-      <AttendanceHistoryList
-        sessions={attendanceHistory || []}
-        onSelectSession={handleSelectHistoricalSession}
-      />
     </ScrollView>
   );
 }

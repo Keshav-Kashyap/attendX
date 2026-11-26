@@ -6,6 +6,7 @@ import {
   Users,
   ChevronRight,
   Trash2,
+  Pencil,
 } from 'lucide-react-native';
 import { Text } from '../../ui/text';
 
@@ -14,11 +15,23 @@ export default function ControlsTab({
   onAssignFaculty,
   onAddSubject,
   onEnrollBatch,
+  onEditCourse,
   onDeleteCourse,
 }) {
   if (!course) return null;
 
   const controlItems = [
+    ...(onEditCourse
+      ? [
+          {
+            key: 'edit',
+            title: 'Edit Course Details',
+            subtitle: 'Update course name, code, duration or description',
+            icon: <Pencil size={15} color="#007AFF" />,
+            onPress: onEditCourse,
+          },
+        ]
+      : []),
     {
       key: 'assign',
       title: 'Faculty Allocations',

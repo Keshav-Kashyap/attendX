@@ -2,7 +2,8 @@ import "../global.css";
 import React, { useEffect } from 'react';
 import { StatusBar, LogBox, View, ActivityIndicator } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Stack } from 'expo-router';
+import { Stack, router } from 'expo-router';
+import * as Notifications from 'expo-notifications';
 import { useFonts } from 'expo-font';
 import {
   Inter_400Regular,
@@ -13,6 +14,8 @@ import {
   Inter_900Black,
 } from '@expo-google-fonts/inter';
 import { useAuthStore } from '../src/store/useAuthStore';
+import { registerForPushNotificationsAsync } from '../src/services/notificationService';
+import GlobalBottomChrome from '../src/components/layout/GlobalBottomChrome';
 
 LogBox.ignoreLogs([
   'SafeAreaView has been deprecated',
@@ -26,12 +29,15 @@ const queryClient = new QueryClient({
     queries: {
       retry: 1,
       refetchOnWindowFocus: false,
+      staleTime: 60 * 1000,
+      gcTime: 10 * 60 * 1000,
     },
   },
 });
 
 export default function RootLayout() {
   const loadStoredAuth = useAuthStore((state) => state.loadStoredAuth);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
@@ -46,6 +52,26 @@ export default function RootLayout() {
     loadStoredAuth();
   }, [loadStoredAuth]);
 
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    registerForPushNotificationsAsync();
+
+    const receivedSub = Notifications.addNotificationReceivedListener(() => {});
+    const responseSub = Notifications.addNotificationResponseReceivedListener((response) => {
+      const data = response?.notification?.request?.content?.data || {};
+      if (data?.type === 'class_reminder_5m' || data?.type === 'coordinator_assigned') {
+        router.push('/home');
+      } else if (data?.type === 'attendance_completed') {
+        router.push('/(student)/history');
+      }
+    });
+
+    return () => {
+      receivedSub.remove();
+      responseSub.remove();
+    };
+  }, [isAuthenticated]);
+
   if (!fontsLoaded) {
     return (
       <View style={{ flex: 1, backgroundColor: '#ffffff', alignItems: 'center', justifyContent: 'center' }}>
@@ -58,22 +84,23 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          animation: 'none',
-        }}
-      >
-        <Stack.Screen name="index" options={{ animation: 'fade' }} />
-        <Stack.Screen name="home" options={{ animation: 'none' }} />
-        <Stack.Screen name="admin_teachers" options={{ animation: 'none' }} />
-        <Stack.Screen name="admin_students" options={{ animation: 'none' }} />
-        <Stack.Screen name="admin_courses" options={{ animation: 'none' }} />
-        <Stack.Screen name="profile" options={{ animation: 'none' }} />
-        <Stack.Screen name="teacher" options={{ animation: 'none' }} />
-        <Stack.Screen name="history" options={{ animation: 'none' }} />
-        <Stack.Screen name="admin_teacher_assign" options={{ animation: 'slide_from_right' }} />
-      </Stack>
+      <View style={{ flex: 1 }}>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            animation: 'none',
+          }}
+        >
+          <Stack.Screen name="index" options={{ animation: 'none' }} />
+          <Stack.Screen name="enroll" options={{ animation: 'none' }} />
+          <Stack.Screen name="home" options={{ animation: 'none' }} />
+          <Stack.Screen name="profile" options={{ animation: 'none' }} />
+          <Stack.Screen name="(admin)" options={{ headerShown: false, animation: 'none' }} />
+          <Stack.Screen name="(teacher)" options={{ headerShown: false, animation: 'none' }} />
+          <Stack.Screen name="(student)" options={{ headerShown: false, animation: 'none' }} />
+        </Stack>
+        <GlobalBottomChrome />
+      </View>
     </QueryClientProvider>
   );
 }

@@ -55,6 +55,7 @@ class Student(db.Model):
         course_id_val = current_enr.course_id if current_enr else None
         sem_id_val = self.semester_id or (current_enr.semester_id if current_enr else None)
         sem_num_val = (self.semester_rel.semester_number if getattr(self, "semester_rel", None) else None) or (current_enr.semester_rel.semester_number if (current_enr and getattr(current_enr, "semester_rel", None)) else None) or 1
+        sem_name = f"Semester {sem_num_val}" if sem_num_val else None
 
         return {
             "id": self.id,
@@ -68,8 +69,10 @@ class Student(db.Model):
             "course_name": course_name,
             "semester_id": sem_id_val,
             "semester_number": sem_num_val,
+            "semester": sem_name,
             "phone": self.phone,
-            "has_face": bool(profile_img or self.face_embedding),
+            "has_face": bool(self.face_embedding or profile_img),
+            "has_face_embedding": bool(self.face_embedding),
             "has_voice": bool(self.voice_embedding),
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }

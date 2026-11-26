@@ -23,7 +23,7 @@ function isValidImageAsset(asset) {
   return true;
 }
 
-function extractImageDataUri(asset) {
+async function extractImageDataUri(asset) {
   if (!asset) return null;
   if (asset.base64) {
     const mime = asset.mimeType && asset.mimeType.startsWith('image/')
@@ -31,7 +31,21 @@ function extractImageDataUri(asset) {
       : 'image/jpeg';
     return `data:${mime};base64,${asset.base64}`;
   }
-  return asset.uri || null;
+  if (asset.uri) {
+    try {
+      const resp = await fetch(asset.uri);
+      const blob = await resp.blob();
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = () => resolve(asset.uri);
+        reader.readAsDataURL(blob);
+      });
+    } catch {
+      return asset.uri;
+    }
+  }
+  return null;
 }
 
 /**
@@ -73,7 +87,7 @@ export function ImagePickerField({
           onError?.('Only image files (JPG, PNG, WEBP) are allowed. PDF files are not supported.');
           return;
         }
-        const dataUri = extractImageDataUri(asset);
+        const dataUri = await extractImageDataUri(asset);
         if (dataUri) {
           onError?.('');
           onChange?.(dataUri);

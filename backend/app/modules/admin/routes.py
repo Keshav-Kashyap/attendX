@@ -18,7 +18,11 @@ from app.modules.admin.service import (
     admin_update_enrollment,
     admin_get_all_teachers,
     admin_create_teacher,
+    admin_update_teacher,
+    admin_delete_teacher,
     admin_create_student,
+    admin_update_student,
+    admin_delete_student,
     admin_get_all_students,
     admin_get_teacher_assignments,
     admin_assign_teacher,
@@ -186,6 +190,7 @@ class TeacherCreateSchema(BaseModel):
     specialization: Optional[str] = Field(None, description="Subject specialization e.g. AI & ML")
     department: Optional[str] = Field(None, description="Department name fallback")
     joining_date: Optional[str] = Field(None, description="Optional joining date (YYYY-MM-DD)")
+    coordinator_semester_id: Optional[int] = Field(None, description="Semester ID if assigned as class coordinator")
     course_id: Optional[int] = Field(None, description="Initial course assignment")
     subject_id: Optional[int] = Field(None, description="Initial subject assignment")
     room: Optional[str] = Field(default="Block B, Hall 3", description="Assigned room")
@@ -200,10 +205,48 @@ class StudentCreateSchema(BaseModel):
     phone: Optional[str] = Field(None, description="Contact phone")
     profile_image: Optional[str] = Field(None, description="Optional base64 or URL student photo")
     photo: Optional[str] = Field(None, description="Optional alias for student photo")
+    photo_url: Optional[str] = Field(None, description="Optional alias for student photo URL")
+    face_embedding: Optional[Any] = None
     course_id: Optional[int] = Field(None, description="Course ID to enroll into")
     semester_id: Optional[int] = Field(None, description="Semester ID")
     semester: Optional[str] = Field(default="Semester 1", description="Semester name e.g. 'Semester 1'")
+    semester_number: Optional[int] = None
     academic_year: Optional[str] = Field(default="2026-2027", description="Academic year / batch")
+
+
+class TeacherUpdateSchema(BaseModel):
+    name: Optional[str] = None
+    email: Optional[str] = None
+    employee_code: Optional[str] = None
+    phone: Optional[str] = None
+    qualification: Optional[str] = None
+    specialization: Optional[str] = None
+    department: Optional[str] = None
+    joining_date: Optional[str] = None
+    is_active: Optional[bool] = None
+    coordinator_semester_id: Optional[int] = None
+    profile_image: Optional[str] = None
+
+
+class StudentUpdateSchema(BaseModel):
+    name: Optional[str] = None
+    email: Optional[str] = None
+    roll_number: Optional[str] = None
+    phone: Optional[str] = None
+    profile_image: Optional[str] = None
+    photo: Optional[str] = None
+    photo_url: Optional[str] = None
+    face_embedding: Optional[Any] = None
+    course_id: Optional[int] = None
+    course: Optional[str] = None
+    semester_id: Optional[int] = None
+    semester: Optional[str] = None
+    semester_number: Optional[int] = None
+    is_active: Optional[bool] = None
+    guardian_name: Optional[str] = None
+    guardian_phone: Optional[str] = None
+    dob: Optional[str] = None
+    address: Optional[str] = None
 
 
 
@@ -383,6 +426,25 @@ async def create_new_teacher(
     return admin_create_teacher(payload.model_dump())
 
 
+@admin_bp.put("/teachers/{teacher_id}")
+async def update_existing_teacher(
+    teacher_id: int,
+    payload: TeacherUpdateSchema,
+    current_admin: User = Depends(admin_required)
+):
+    """Update teacher profile, designations, contact details, or active status."""
+    return admin_update_teacher(teacher_id, payload.model_dump(exclude_unset=True))
+
+
+@admin_bp.delete("/teachers/{teacher_id}")
+async def remove_existing_teacher(
+    teacher_id: int,
+    current_admin: User = Depends(admin_required)
+):
+    """Remove a teacher and cascade their user account."""
+    return admin_delete_teacher(teacher_id)
+
+
 @admin_bp.get("/students")
 async def list_admin_students(
     search: Optional[str] = Query(None),
@@ -401,6 +463,25 @@ async def create_new_student(
 ):
     """Register and create a new student with roll number and course/semester enrollment."""
     return admin_create_student(payload.model_dump())
+
+
+@admin_bp.put("/students/{student_id}")
+async def update_existing_student(
+    student_id: int,
+    payload: StudentUpdateSchema,
+    current_admin: User = Depends(admin_required)
+):
+    """Update student profile, enrollment, contact, or status."""
+    return admin_update_student(student_id, payload.model_dump(exclude_unset=True))
+
+
+@admin_bp.delete("/students/{student_id}")
+async def remove_existing_student(
+    student_id: int,
+    current_admin: User = Depends(admin_required)
+):
+    """Remove a student and cascade their user account."""
+    return admin_delete_student(student_id)
 
 
 @admin_bp.get("/teacher-assignments")

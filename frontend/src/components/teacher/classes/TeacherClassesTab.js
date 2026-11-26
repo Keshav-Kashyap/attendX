@@ -22,7 +22,7 @@ export default function TeacherClassesTab({ user, onStartAttendanceSession }) {
   return (
     <ScrollView
       className="flex-1 px-4 pt-3"
-      contentContainerStyle={{ paddingBottom: 40 }}
+      contentContainerStyle={{ paddingBottom: 120 }}
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
       nestedScrollEnabled={true}

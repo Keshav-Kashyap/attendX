@@ -82,17 +82,35 @@ def record_attendance_session(user_id: int, scan_data: dict):
                 db.session.add(subject)
                 db.session.flush()
 
-        # Issue 1 fix: Course membership strictly from course_enrollments
-        enrolled_students = Student.query.join(
+        # Semester-based filtering: Target semester strictly from subject or scan_data
+        target_semester_id = scan_data.get("semester_id") or (subject.semester_id if subject else None)
+
+        # Query enrolled students strictly for this course and semester
+        enrollment_query = Student.query.join(
             CourseEnrollment, CourseEnrollment.student_id == Student.id
         ).filter(
             CourseEnrollment.course_id == course.id,
             CourseEnrollment.status == "active"
-        ).all()
+        )
+        if target_semester_id:
+            enrollment_query = enrollment_query.filter(
+                or_(
+                    CourseEnrollment.semester_id == target_semester_id,
+                    Student.semester_id == target_semester_id
+                )
+            )
+        enrolled_students = enrollment_query.all()
 
-        # Fallback to all students if no specific enrollment registered yet
-        if not enrolled_students:
-            enrolled_students = Student.query.all()
+        # Fallback to semester students if CourseEnrollment rows not seeded for this semester
+        if not enrolled_students and target_semester_id:
+            enrolled_students = Student.query.filter(Student.semester_id == target_semester_id).all()
+        elif not enrolled_students:
+            enrolled_students = Student.query.join(
+                CourseEnrollment, CourseEnrollment.student_id == Student.id
+            ).filter(
+                CourseEnrollment.course_id == course.id,
+                CourseEnrollment.status == "active"
+            ).all()
 
         session_code = f"ATT-{datetime.now().strftime('%Y%m%d')}-{uuid4().hex[:6].upper()}"
 
@@ -103,7 +121,8 @@ def record_attendance_session(user_id: int, scan_data: dict):
             subject_id=subject.id,
             room=room,
             photos_count=len(photos),
-            date=datetime.now()
+            date=datetime.now(),
+            is_confirmed=False,
         )
         db.session.add(session)
         db.session.flush()
@@ -142,7 +161,14 @@ def record_attendance_session(user_id: int, scan_data: dict):
             has_detections = len(detected_students_map) > 0
 
             for idx, std in enumerate(enrolled_students):
-                if has_detections:
+                has_emb = bool(std.face_embedding)
+
+                # Check: Jiski embedding nahi hai, wo check nahi hoga (Strictly Absent)
+                if not has_emb:
+                    status = "Absent"
+                    conf = None
+                    remarks = "Biometric face embedding not registered in system"
+                elif has_detections:
                     is_present = std.id in detected_students_map
                     match_info = detected_students_map.get(std.id)
                     conf = match_info.get("confidence") if isinstance(match_info, dict) else "96.5%"
@@ -150,11 +176,10 @@ def record_attendance_session(user_id: int, scan_data: dict):
                     conf = conf if is_present else None
                     remarks = "Facial recognition verified in classroom photo" if is_present else "Face not detected in classroom photos"
                 else:
-                    # Fallback for batches if photos had no detected faces or embeddings not yet enrolled
-                    is_absent = (len(enrolled_students) > 3 and idx % 4 == 3)
-                    status = "Absent" if is_absent else "Present"
-                    conf = None if is_absent else f"{round(95.0 + (idx % 5), 1)}%"
-                    remarks = "Facial landmarks verified" if not is_absent else "Face not detected in classroom photos"
+                    # If no faces were detected in the photo, mark Absent so teacher can verify and manually tick
+                    status = "Absent"
+                    conf = None
+                    remarks = "No face recognized in classroom photo"
 
                 rec = AttendanceRecord(
                     session_id=session.id,
@@ -211,7 +236,9 @@ def get_attendance_sessions_history(user_id: int):
 
             records = AttendanceRecord.query.filter(
                 AttendanceRecord.student_id == student.id
-            ).join(AttendanceSession).order_by(AttendanceSession.created_at.desc()).all()
+            ).join(AttendanceSession).filter(
+                AttendanceSession.is_confirmed == True
+            ).order_by(AttendanceSession.created_at.desc()).all()
 
             student_data = []
             for r in records:
@@ -246,7 +273,8 @@ def get_attendance_sessions_history(user_id: int):
             )
 
         sessions = AttendanceSession.query.filter(
-            AttendanceSession.teacher_id == teacher.id
+            AttendanceSession.teacher_id == teacher.id,
+            AttendanceSession.is_confirmed == True
         ).order_by(AttendanceSession.created_at.desc()).all()
 
         return JSONResponse(
@@ -309,7 +337,7 @@ def update_attendance_record(user_id: int, record_id: int, update_data: dict):
         session = record.session
         if session:
             records = AttendanceRecord.query.filter(AttendanceRecord.session_id == session.id).all()
-            total_present = sum(1 for r in records if r.status in ["Present", "Late"])
+            total_present = sum(1 for r in records if r.status == "Present")
             total_absent = sum(1 for r in records if r.status == "Absent")
             session.total_present = total_present
             session.total_absent = total_absent
@@ -330,4 +358,78 @@ def update_attendance_record(user_id: int, record_id: int, update_data: dict):
         return JSONResponse(
             status_code=500,
             content={"success": False, "message": "Failed to update record", "error": str(e)}
+        )
+
+
+def confirm_attendance_session(user_id: int, session_id: int, payload: dict = None):
+    try:
+        user = User.query.filter(User.id == user_id).first()
+        if not user or user.role != "teacher":
+            return JSONResponse(
+                status_code=403,
+                content={"success": False, "message": "Only faculty members can confirm attendance"}
+            )
+
+        session = AttendanceSession.query.filter(AttendanceSession.id == session_id).first()
+        if not session:
+            return JSONResponse(
+                status_code=404,
+                content={"success": False, "message": "Attendance session not found"}
+            )
+
+        # Process any manual status overrides provided in payload
+        if payload and "records" in payload and isinstance(payload["records"], list):
+            for item in payload["records"]:
+                std_id = item.get("student_id")
+                rec_id = item.get("id") or item.get("record_id")
+                new_status = item.get("status")
+                rec = None
+                if rec_id:
+                    rec = AttendanceRecord.query.filter(
+                        AttendanceRecord.id == rec_id,
+                        AttendanceRecord.session_id == session.id
+                    ).first()
+                elif std_id:
+                    rec = AttendanceRecord.query.filter(
+                        AttendanceRecord.student_id == std_id,
+                        AttendanceRecord.session_id == session.id
+                    ).first()
+
+                if rec and new_status in ["Present", "Absent"]:
+                    rec.status = new_status
+                    if new_status == "Present" and not rec.confidence:
+                        rec.confidence = "Manual"
+                        rec.remarks = "Manually marked present by faculty"
+                    elif new_status == "Absent":
+                        rec.confidence = None
+                        rec.remarks = "Marked absent by faculty"
+
+        # Strictly calculate Present and Absent totals
+        records = AttendanceRecord.query.filter(AttendanceRecord.session_id == session.id).all()
+        total_present = sum(1 for r in records if r.status == "Present")
+        total_absent = sum(1 for r in records if r.status == "Absent")
+        session.total_present = total_present
+        session.total_absent = total_absent
+        session.total_enrolled = len(records)
+        session.is_confirmed = True
+
+        db.session.commit()
+
+        from app.modules.notifications.fcm import notify_attendance_session_completed
+        notify_attendance_session_completed(session, records)
+
+        return JSONResponse(
+            status_code=200,
+            content={
+                "success": True,
+                "message": f"Class attendance confirmed successfully! {total_present} Present, {total_absent} Absent.",
+                "data": session.to_dict(include_records=True)
+            }
+        )
+    except Exception as e:
+        db.session.rollback()
+        print("Confirm attendance session error:", str(e))
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "message": "Failed to confirm attendance session", "error": str(e)}
         )

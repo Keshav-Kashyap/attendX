@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, ScrollView, RefreshControl, TouchableOpacity } from 'react-native';
-import { useRouter } from 'expo-router';
+import { router } from 'expo-router';
 import { Text } from '../../components/ui/text';
 import Welcome from '../../components/ui/common/Welcome';
 import {
@@ -15,7 +15,6 @@ import { useStudentDashboard } from '../../hooks/useStudent';
 import { AlertCircle, RefreshCw } from 'lucide-react-native';
 
 export default function StudentHomeView({ user, onNavigate }) {
-  const router = useRouter();
   const {
     data: dashboardData,
     isLoading,
@@ -45,14 +44,15 @@ export default function StudentHomeView({ user, onNavigate }) {
 
   return (
     <ScrollView
-      className="flex-1 bg-background px-5 pt-3 pb-10"
+      className="flex-1 bg-[#F5F6FA]"
+      contentContainerStyle={{ paddingBottom: 120 }}
       showsVerticalScrollIndicator={false}
       refreshControl={
         <RefreshControl
           refreshing={isRefetching}
           onRefresh={refetch}
-          colors={['#0052cc']}
-          tintColor="#0052cc"
+          colors={['#3446D4']}
+          tintColor="#3446D4"
         />
       }
     >
@@ -60,8 +60,9 @@ export default function StudentHomeView({ user, onNavigate }) {
       <Welcome
         user={user}
         role="student"
-
       />
+
+      <View className="px-5 -mt-8">
 
       {/* Loading Skeleton State */}
       {isLoading ? (
@@ -128,6 +129,7 @@ export default function StudentHomeView({ user, onNavigate }) {
           />
         </View>
       )}
+      </View>
     </ScrollView>
   );
 }

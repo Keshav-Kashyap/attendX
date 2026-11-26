@@ -33,7 +33,6 @@ export const getBaseUrl = () => {
 };
 
 export const API_BASE_URL = getBaseUrl();
-console.log('Configured API_BASE_URL:', API_BASE_URL);
 
 const TOKEN_KEY = '@ai_attendance_token';
 let inMemoryToken = null;
@@ -68,7 +67,6 @@ export const setStoredToken = async (token) => {
 
 export async function apiClient(endpoint, options = {}) {
   const url = `${API_BASE_URL}${endpoint}`;
-  console.log(`[API Request] ${options.method || 'GET'} ${url}`);
 
   let token = null;
   try {
@@ -102,8 +100,6 @@ export async function apiClient(endpoint, options = {}) {
     } else {
       data = await response.text();
     }
-
-    console.log(`[API Response] ${response.status} from ${url}`, data);
 
     if (!response.ok) {
       const errorMessage =

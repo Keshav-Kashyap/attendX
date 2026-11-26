@@ -15,6 +15,7 @@ class AttendanceSession(db.Model):
     total_enrolled = db.Column(db.Integer, default=0, nullable=False)
     total_present = db.Column(db.Integer, default=0, nullable=False)
     total_absent = db.Column(db.Integer, default=0, nullable=False)
+    is_confirmed = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, server_default=db.func.now(), nullable=False)
 
     teacher = db.relationship("Teacher", backref=db.backref("attendance_sessions", cascade="all, delete-orphan", lazy=True))
@@ -49,6 +50,7 @@ class AttendanceSession(db.Model):
             "total_present": self.total_present,
             "total_detected": self.total_present,
             "total_absent": self.total_absent,
+            "is_confirmed": bool(self.is_confirmed),
             "attendance_rate": f"{round((self.total_present / max(self.total_enrolled, 1)) * 100)}%",
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }

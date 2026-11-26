@@ -36,6 +36,11 @@ class AttendanceScanSchema(BaseModel):
     subject: Optional[str] = "Computer Vision (CS-401)"
     room: Optional[str] = "Block B, Hall 3"
     batch: Optional[str] = None
+    semester_id: Optional[int] = None
+
+
+class AttendanceConfirmSchema(BaseModel):
+    records: Optional[List[dict]] = None
 
 
 @teacher_bp.post("/profile")
@@ -82,3 +87,14 @@ async def scan_attendance(
 @teacher_bp.get("/attendance/history")
 async def attendance_history(user_id: int = Depends(token_required)):
     return get_attendance_history(user_id)
+
+
+@teacher_bp.post("/attendance/sessions/{session_id}/confirm")
+async def confirm_session(
+    session_id: int,
+    payload: Optional[AttendanceConfirmSchema] = None,
+    user_id: int = Depends(token_required)
+):
+    from app.modules.attendance.service import confirm_attendance_session
+    data = payload.model_dump() if payload else {}
+    return confirm_attendance_session(user_id, session_id, data)

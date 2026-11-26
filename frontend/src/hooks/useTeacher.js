@@ -62,7 +62,26 @@ export function useScanAttendance() {
       return response;
     },
     onSuccess: () => {
+      // Do not invalidate attendance history on scan — only after explicit Confirm
+    },
+  });
+}
+
+export function useConfirmAttendanceSession() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ sessionId, records }) => {
+      const response = await teacherService.confirmAttendanceSession(sessionId, { records });
+      return response;
+    },
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teacherAttendanceHistory'] });
+      queryClient.invalidateQueries({ queryKey: ['teacherStudents'] });
+      queryClient.invalidateQueries({ queryKey: ['teacherReports'] });
+      queryClient.invalidateQueries({ queryKey: ['teacherCourses'] });
+      queryClient.invalidateQueries({ queryKey: ['studentDashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['studentHistory'] });
     },
   });
 }

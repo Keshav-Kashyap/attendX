@@ -1,23 +1,12 @@
 import React from 'react';
 import { View, Platform, StatusBar } from 'react-native';
-import { useRouter, Redirect } from 'expo-router';
-import StudentProfileSetup from '../src/components/auth/StudentProfileSetup';
-import KeyboardSafeView from '../src/components/ui/KeyboardSafeView';
-import { useAuthStore } from '../src/store/useAuthStore';
+import { router } from 'expo-router';
+import StudentProfileSetup from '../../src/components/auth/StudentProfileSetup';
+import KeyboardSafeView from '../../src/components/ui/KeyboardSafeView';
+import { useAuthStore } from '../../src/store/useAuthStore';
 
 export default function BiometricsPage() {
-  const router = useRouter();
   const user = useAuthStore((state) => state.user);
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const isLoading = useAuthStore((state) => state.isLoading);
-
-  if (isLoading) {
-    return null;
-  }
-
-  if (!isAuthenticated || !user) {
-    return <Redirect href="/" />;
-  }
 
   const containerStyle = {
     flex: 1,

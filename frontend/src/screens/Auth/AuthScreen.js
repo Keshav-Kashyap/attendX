@@ -3,11 +3,9 @@ import { ScrollView } from 'react-native';
 import KeyboardSafeView from '../../components/ui/KeyboardSafeView';
 import AuthHeader from '../../components/auth/AuthHeader';
 import LoginForm from '../../components/auth/LoginForm';
-import SignupForm from '../../components/auth/SignupForm';
 
 export default function AuthScreen({ onLogin }) {
   const [role, setRole] = useState('student');
-  const [isLogin, setIsLogin] = useState(true);
 
   return (
     <KeyboardSafeView className="bg-background">
@@ -20,19 +18,10 @@ export default function AuthScreen({ onLogin }) {
       >
         <AuthHeader role={role} onRoleChange={setRole} />
 
-        {isLogin ? (
-          <LoginForm
-            role={role}
-            onLogin={(data, opts) => onLogin && onLogin(data, opts || { isSignup: false })}
-            onSwitchToSignup={() => setIsLogin(false)}
-          />
-        ) : (
-          <SignupForm
-            role={role}
-            onLogin={(data, opts) => onLogin && onLogin(data, opts || { isSignup: true })}
-            onSwitchToLogin={() => setIsLogin(true)}
-          />
-        )}
+        <LoginForm
+          role={role}
+          onLogin={(data, opts) => onLogin && onLogin(data, opts || { isSignup: false })}
+        />
       </ScrollView>
     </KeyboardSafeView>
   );

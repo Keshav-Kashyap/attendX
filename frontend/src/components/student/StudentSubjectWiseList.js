@@ -29,7 +29,7 @@ export default function StudentSubjectWiseList({ subjects = [] }) {
   }
 
   return (
-    <View style={{ gap: 12 }}>
+    <View style={{ gap: 10 }}>
       {subjects.map((sub, idx) => {
         const total = sub.total_classes ?? 0;
         const attended = sub.attended_classes ?? 0;
@@ -68,13 +68,13 @@ export default function StudentSubjectWiseList({ subjects = [] }) {
               backgroundColor: '#ffffff',
               borderRadius: 20,
               borderWidth: 1,
-              borderColor: '#e2e8f0',
-              padding: 16,
+              borderColor: '#f1f5f9',
+              padding: 13,
               shadowColor: '#0f172a',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.04,
-              shadowRadius: 6,
-              elevation: 1,
+              shadowOffset: { width: 0, height: 3 },
+              shadowOpacity: 0.05,
+              shadowRadius: 10,
+              elevation: 2,
             }}
           >
             {/* Top row: Subject Code/Name and Percentage Badge */}
@@ -83,21 +83,21 @@ export default function StudentSubjectWiseList({ subjects = [] }) {
                 flexDirection: 'row',
                 justifyContent: 'space-between',
                 alignItems: 'flex-start',
-                marginBottom: 8,
+                marginBottom: 6,
               }}
             >
               <View style={{ flex: 1, marginRight: 10 }}>
                 <Text
                   numberOfLines={1}
                   style={{
-                    fontSize: 15,
-                    fontWeight: '800',
+                    fontSize: 14.5,
+                    fontWeight: '600',
                     color: '#0f172a',
                   }}
                 >
-                  {sub.subject_code ? `${sub.subject_code} • ${sub.subject_name}` : sub.subject_name}
+                  {sub.subject_code ? `${sub.subject_code} · ${sub.subject_name}` : sub.subject_name}
                 </Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 3 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginTop: 3 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                     <User size={11} color="#64748b" />
                     <Text style={{ fontSize: 11, color: '#64748b' }}>
@@ -117,9 +117,9 @@ export default function StudentSubjectWiseList({ subjects = [] }) {
               <View
                 style={{
                   paddingHorizontal: 10,
-                  paddingVertical: 5,
+                  paddingVertical: 4,
                   backgroundColor: statusBg,
-                  borderRadius: 14,
+                  borderRadius: 12,
                   borderWidth: 1,
                   borderColor: statusBorder,
                   alignItems: 'center',
@@ -128,7 +128,7 @@ export default function StudentSubjectWiseList({ subjects = [] }) {
                 <Text
                   style={{
                     fontSize: 13,
-                    fontWeight: '900',
+                    fontWeight: '600',
                     color: statusText,
                   }}
                 >
@@ -136,8 +136,8 @@ export default function StudentSubjectWiseList({ subjects = [] }) {
                 </Text>
                 <Text
                   style={{
-                    fontSize: 9,
-                    fontWeight: '700',
+                    fontSize: 9.5,
+                    fontWeight: '500',
                     color: statusText,
                     marginTop: -1,
                   }}
@@ -150,11 +150,11 @@ export default function StudentSubjectWiseList({ subjects = [] }) {
             {/* Horizontal Progress Bar */}
             <View
               style={{
-                height: 6,
+                height: 5,
                 backgroundColor: '#f1f5f9',
                 borderRadius: 3,
                 overflow: 'hidden',
-                marginVertical: 10,
+                marginVertical: 8,
               }}
             >
               <View
@@ -175,15 +175,15 @@ export default function StudentSubjectWiseList({ subjects = [] }) {
                 alignItems: 'center',
               }}
             >
-              <Text style={{ fontSize: 11, fontWeight: '600', color: '#475569' }}>
-                <Text style={{ fontWeight: '800', color: '#0f172a' }}>{attended}</Text> of{' '}
-                <Text style={{ fontWeight: '800', color: '#0f172a' }}>{total}</Text> lectures attended
+              <Text style={{ fontSize: 11.5, fontWeight: '400', color: '#64748b' }}>
+                <Text style={{ fontWeight: '600', color: '#0f172a' }}>{attended}</Text> of{' '}
+                <Text style={{ fontWeight: '600', color: '#0f172a' }}>{total}</Text> lectures attended
               </Text>
 
               <Text
                 style={{
-                  fontSize: 10,
-                  fontWeight: '700',
+                  fontSize: 11,
+                  fontWeight: '500',
                   color: isSafe && hasSessions ? '#059669' : (hasSessions ? '#dc2626' : '#64748b'),
                 }}
               >

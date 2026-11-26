@@ -8,7 +8,7 @@ import {
   Easing,
   Platform,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { router } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   Plus,
@@ -17,12 +17,14 @@ import {
   GraduationCap,
   ArrowLeftRight,
   Layers,
+  QrCode,
 } from 'lucide-react-native';
 import { Text } from '../ui/text';
 import CreateCourseModal from './CreateCourseModal';
 import CreateTeacherModal from './CreateTeacherModal';
 import CreateStudentModal from './CreateStudentModal';
 import BatchEnrollModal from './BatchEnrollModal';
+import InviteLinkModal from './InviteLinkModal';
 
 function SpeedDialActionItem({ item, anim, onPress }) {
   const IconComponent = item.icon || Plus;
@@ -108,7 +110,6 @@ export default function AdminSpeedDial({
   bottomOffset = 84,
   rightOffset = 20,
 }) {
-  const router = useRouter();
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -121,6 +122,7 @@ export default function AdminSpeedDial({
   const [showTeacherModal, setShowTeacherModal] = useState(false);
   const [showStudentModal, setShowStudentModal] = useState(false);
   const [showBatchEnrollModal, setShowBatchEnrollModal] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
 
   const handleCreateCourse = () => {
     if (onAddCourse) {
@@ -158,7 +160,7 @@ export default function AdminSpeedDial({
     if (onAssignFaculty) {
       onAssignFaculty();
     } else {
-      router.push('/admin_teacher_assign');
+      router.push('/users/assign');
     }
   };
 
@@ -203,6 +205,14 @@ export default function AdminSpeedDial({
       color: '#9333ea',
       badgeBg: '#faf5ff',
       onPress: handleAssignFaculty,
+    },
+    {
+      id: 'invite_qr',
+      label: 'Invite QR',
+      icon: QrCode,
+      color: '#0284c7',
+      badgeBg: '#e0f2fe',
+      onPress: () => setShowInviteModal(true),
     },
   ];
 
@@ -456,6 +466,13 @@ export default function AdminSpeedDial({
           queryClient.invalidateQueries({ queryKey: ['admin', 'courses'] });
           queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
         }}
+      />
+
+      <InviteLinkModal
+        visible={showInviteModal}
+        onClose={() => setShowInviteModal(false)}
+        type="student"
+        allowSwitch={true}
       />
     </>
   );

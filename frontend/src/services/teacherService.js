@@ -28,6 +28,12 @@ export const teacherService = {
       body: payload,
     }),
 
+  confirmAttendanceSession: (sessionId, payload) =>
+    apiClient(`/api/teacher/attendance/sessions/${sessionId}/confirm`, {
+      method: 'POST',
+      body: payload,
+    }),
+
   getAttendanceHistory: () =>
     apiClient('/api/teacher/attendance/history', {
       method: 'GET',

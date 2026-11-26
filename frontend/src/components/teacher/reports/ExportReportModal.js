@@ -46,7 +46,7 @@ export default function ExportReportModal({ visible, onClose, reportsData }) {
       setIsCopied(true);
       setTimeout(() => setIsCopied(false), 2500);
     } catch (err) {
-      console.log('Share error:', err);
+      // ignore share cancel
     }
   };
 

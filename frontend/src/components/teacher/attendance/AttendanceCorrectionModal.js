@@ -23,8 +23,6 @@ export default function AttendanceCorrectionModal({ visible, onClose, record, on
   const statuses = [
     { id: 'Present', label: 'Present', color: 'emerald' },
     { id: 'Absent', label: 'Absent', color: 'red' },
-    { id: 'Late', label: 'Late', color: 'amber' },
-    { id: 'Pending Verification', label: 'Pending', color: 'sky' },
   ];
 
   const handleSave = async () => {
@@ -41,7 +39,6 @@ export default function AttendanceCorrectionModal({ visible, onClose, record, on
       }
       onClose();
     } catch (err) {
-      console.log('Update record error:', err);
       // Even if offline/local, still update local state
       if (onRecordUpdated) {
         onRecordUpdated({ ...record, status: selectedStatus, remarks });

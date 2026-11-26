@@ -1,12 +1,12 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { View, ScrollView, RefreshControl, Share } from 'react-native';
-import { useRouter } from 'expo-router';
+import { router } from 'expo-router';
+import { Skeleton } from '../../components/ui/Skeleton';
+import { safePush } from '../../utils/navigation';
 
 import CourseListView from '../../components/admin/CourseListView';
 import CourseSemestersView from '../../components/admin/CourseSemestersView';
 import {
-  CourseDetailHeader,
-  CourseHeroCard,
   CourseDetailActions,
   CourseDetailTabs,
   CurriculumTab,
@@ -15,10 +15,13 @@ import {
   ControlsTab,
   DirectMessageModal,
 } from '../../components/admin/courseDetail';
+import { Text } from '../../components/ui/text';
 
 import CreateCourseModal from '../../components/admin/CreateCourseModal';
+import EditCourseModal from '../../components/admin/EditCourseModal';
 import AddSubjectModal from '../../components/admin/AddSubjectModal';
 import BatchEnrollModal from '../../components/admin/BatchEnrollModal';
+import InviteLinkModal from '../../components/admin/InviteLinkModal';
 import { ConfirmDialog } from '../../components/ui/alert-dialog';
 
 import {
@@ -26,25 +29,30 @@ import {
   useCourseSemesters,
   useSemesterSubjects,
   useAdminStudents,
+  useAdminTeachers,
+  useUpdateTeacher,
   useDeleteCourse,
   useDeleteSubject,
 } from '../../hooks/useAdmin';
 
-export default function AdminCoursesScreen({ user }) {
-  const router = useRouter();
-
+export default function AdminCoursesScreen({ user, initialCourseId, initialCourseCode, initialSemesterId }) {
   // Navigation & Filter State
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCourseFilter, setSelectedCourseFilter] = useState('all');
-  const [selectedCourseId, setSelectedCourseId] = useState(null);
+  const [selectedCourseId, setSelectedCourseId] = useState(
+    initialCourseId ? (Number(initialCourseId) || initialCourseId) : null
+  );
   const [selectedSemesterObj, setSelectedSemesterObj] = useState(null);
   const [activeDetailTab, setActiveDetailTab] = useState('curriculum');
   const [isPinned, setIsPinned] = useState(false);
 
   // Modals state
   const [showCreateCourseModal, setShowCreateCourseModal] = useState(false);
+  const [showEditCourseModal, setShowEditCourseModal] = useState(false);
+  const [courseToEdit, setCourseToEdit] = useState(null);
   const [showAddSubjectModal, setShowAddSubjectModal] = useState(false);
   const [showBatchEnrollModal, setShowBatchEnrollModal] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [selectedTeacherForMessage, setSelectedTeacherForMessage] = useState(null);
   const [selectedCourseForSubject, setSelectedCourseForSubject] = useState(null);
@@ -58,6 +66,24 @@ export default function AdminCoursesScreen({ user }) {
     isRefetching,
   } = useAdminCourses();
 
+  useEffect(() => {
+    if (!initialCourseId && !initialCourseCode) {
+      setSelectedCourseId(null);
+      setSelectedSemesterObj(null);
+      return;
+    }
+    if (courses && courses.length > 0) {
+      const match = courses.find(
+        (c) =>
+          (initialCourseId && String(c.id) === String(initialCourseId)) ||
+          (initialCourseCode && c.code === initialCourseCode)
+      );
+      if (match) {
+        setSelectedCourseId(match.id);
+      }
+    }
+  }, [initialCourseId, initialCourseCode, courses]);
+
   // Step 2: Lightweight semesters list when a course is opened
   const {
     data: semestersData = [],
@@ -65,10 +91,50 @@ export default function AdminCoursesScreen({ user }) {
     refetch: refetchSemesters,
   } = useCourseSemesters(selectedCourseId);
 
-  const selectedSemesterId = selectedSemesterObj?.id ?? selectedSemesterObj?.semester_number ?? null;
-  const selectedSemesterName = selectedSemesterObj
-    ? `Semester ${selectedSemesterObj.semester_number}`
+  useEffect(() => {
+    if (!initialSemesterId) {
+      setSelectedSemesterObj(null);
+      return;
+    }
+    if (semestersData && semestersData.length > 0) {
+      const semMatch = semestersData.find(
+        (s) =>
+          String(s.id) === String(initialSemesterId) ||
+          String(s.semester_number) === String(initialSemesterId)
+      );
+      if (semMatch) {
+        setSelectedSemesterObj(semMatch);
+      }
+    }
+  }, [initialSemesterId, semestersData]);
+
+  const selectedSemesterId =
+    selectedSemesterObj?.id ??
+    selectedSemesterObj?.semester_number ??
+    (initialSemesterId ? (Number(initialSemesterId) || initialSemesterId) : null);
+
+  const activeSemesterObj = useMemo(() => {
+    if (selectedSemesterObj) {
+      return semestersData.find((s) => s.id === selectedSemesterObj.id) || selectedSemesterObj;
+    }
+    if (initialSemesterId && semestersData.length > 0) {
+      return (
+        semestersData.find(
+          (s) =>
+            String(s.id) === String(initialSemesterId) ||
+            String(s.semester_number) === String(initialSemesterId)
+        ) || null
+      );
+    }
+    return null;
+  }, [semestersData, selectedSemesterObj, initialSemesterId]);
+
+  const selectedSemesterName = activeSemesterObj
+    ? `Semester ${activeSemesterObj.semester_number}`
     : null;
+
+  const { data: teachersList = [], refetch: refetchTeachers } = useAdminTeachers();
+  const updateTeacherMutation = useUpdateTeacher();
 
   // Step 3: Lazy-load subjects ONLY for semester_id when a semester is opened
   const {
@@ -98,7 +164,7 @@ export default function AdminCoursesScreen({ user }) {
   // Active course summary from lightweight courses list + loaded semester details
   const activeCourse = useMemo(() => {
     if (!selectedCourseId) return null;
-    const listMatch = courses.find((c) => c.id === selectedCourseId);
+    const listMatch = courses.find((c) => String(c.id) === String(selectedCourseId));
     if (!listMatch) return null;
     const semNames =
       semestersData && semestersData.length > 0
@@ -259,6 +325,46 @@ export default function AdminCoursesScreen({ user }) {
     setShowAddSubjectModal(true);
   };
 
+  const handleAssignLeadTeacher = async (teacherId) => {
+    if (!activeSemesterObj?.id) return;
+    try {
+      const currentCoordId = activeSemesterObj.coordinator_teacher_id;
+      if (teacherId === null) {
+        if (!currentCoordId) return;
+        await updateTeacherMutation.mutateAsync({
+          teacherId: currentCoordId,
+          data: { coordinator_semester_id: null },
+        });
+      } else {
+        if (currentCoordId && currentCoordId !== teacherId) {
+          await updateTeacherMutation.mutateAsync({
+            teacherId: currentCoordId,
+            data: { coordinator_semester_id: null },
+          });
+        }
+        await updateTeacherMutation.mutateAsync({
+          teacherId,
+          data: { coordinator_semester_id: activeSemesterObj.id },
+        });
+      }
+      await Promise.all([refetchSemesters(), refetchCourses(), refetchTeachers()]);
+    } catch (err) {
+      setConfirmDialog({
+        title: 'Assignment Failed',
+        description: err?.message || 'Could not assign Lead Teacher for this semester.',
+        confirmText: 'Close',
+        variant: 'destructive',
+        icon: 'warning',
+        onConfirm: () => setConfirmDialog(null),
+      });
+    }
+  };
+
+  const handleEditCourse = (course) => {
+    setCourseToEdit(course);
+    setShowEditCourseModal(true);
+  };
+
   const handleRefreshAll = () => {
     refetchCourses();
     if (selectedCourseId) {
@@ -276,7 +382,7 @@ export default function AdminCoursesScreen({ user }) {
     <View className={`flex-1 ${selectedCourseId ? 'bg-[#F5F5F7]' : 'bg-background'}`}>
       <ScrollView
         className={`flex-1 ${!selectedCourseId ? 'px-4 pt-3 pb-1' : ''}`}
-        contentContainerStyle={{ paddingBottom: 96 }}
+        contentContainerStyle={{ paddingBottom: 124 }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -287,97 +393,13 @@ export default function AdminCoursesScreen({ user }) {
           />
         }
       >
-        {selectedCourseId && activeCourse && selectedSemesterObj ? (
-          <View className="flex-1">
-            {/* Header with Breadcrumb: Courses / Code / Semester */}
-            <CourseDetailHeader
-              courseCode={activeCourse.code}
-              semesterName={selectedSemesterName}
-              onBack={() => setSelectedSemesterObj(null)}
-              isPinned={isPinned}
-              onTogglePin={() => setIsPinned(!isPinned)}
-              onShare={handleShareCourse}
-            />
-
-            {/* Course Hero Card with Semester Dropdown Selector */}
-            <View className="pt-1">
-              <CourseHeroCard
-                course={activeCourse}
-                activeSemester={selectedSemesterName}
-                activeSemesterObj={selectedSemesterObj}
-                semestersList={semestersData}
-                onSemesterChange={(newSemObj) => setSelectedSemesterObj(newSemObj)}
-              />
-            </View>
-
-            {/* Quick Action Buttons */}
-            <CourseDetailActions
-              onAddSubject={openAddSubjectForActiveSemester}
-              onReassignFaculty={() => router.push('/admin_teacher_assign')}
-              onExport={handleExportCourse}
-            />
-
-            {/* Segmented Tabs Control */}
-            <CourseDetailTabs
-              activeTab={activeDetailTab}
-              onTabChange={setActiveDetailTab}
-              studentCount={
-                activeDetailTab === 'students' && !semesterStudentsLoading
-                  ? semesterStudents.length
-                  : selectedSemesterObj.students_count ?? activeCourse.enrolled_students_count ?? 0
-              }
-            />
-
-            {/* Tab 1: Curriculum */}
-            {activeDetailTab === 'curriculum' && (
-              <CurriculumTab
-                course={activeCourse}
-                subjects={semesterSubjects}
-                isLoading={semesterSubjectsLoading}
-                activeSemester={selectedSemesterName}
-                onAddSubject={openAddSubjectForActiveSemester}
-                onDeleteSubject={handleDeleteSubject}
-                onAssignFaculty={() => router.push('/admin_teacher_assign')}
-                onViewTimetable={() => setActiveDetailTab('schedule')}
-                onSendMessage={(teacher) => {
-                  setSelectedTeacherForMessage(teacher);
-                  setShowMessageModal(true);
-                }}
-              />
-            )}
-
-            {/* Tab 2: Students */}
-            {activeDetailTab === 'students' && (
-              <StudentsTab
-                course={activeCourse}
-                students={semesterStudents}
-                isLoading={semesterStudentsLoading}
-                activeSemester={selectedSemesterName}
-                onEnrollBatch={() => setShowBatchEnrollModal(true)}
-              />
-            )}
-
-            {/* Tab 3: Schedule */}
-            {activeDetailTab === 'schedule' && (
-              <ScheduleTab
-                course={activeCourse}
-                subjects={semesterSubjects}
-                isLoading={semesterSubjectsLoading}
-                activeSemester={selectedSemesterName}
-                onAddSubject={openAddSubjectForActiveSemester}
-              />
-            )}
-
-            {/* Tab 4: Controls */}
-            {activeDetailTab === 'controls' && (
-              <ControlsTab
-                course={activeCourse}
-                onAssignFaculty={() => router.push('/admin_teacher_assign')}
-                onAddSubject={openAddSubjectForActiveSemester}
-                onEnrollBatch={() => setShowBatchEnrollModal(true)}
-                onDeleteCourse={handleDeleteCourse}
-              />
-            )}
+        {((initialCourseId || initialCourseCode) && (coursesLoading || !activeCourse)) ||
+        (initialSemesterId && (semestersLoading || !activeSemesterObj)) ? (
+          <View className="px-4 pt-4 gap-3">
+            <Skeleton width={120} height={24} borderRadius={8} />
+            <Skeleton width="100%" height={140} borderRadius={20} />
+            <Skeleton width="100%" height={80} borderRadius={16} />
+            <Skeleton width="100%" height={80} borderRadius={16} />
           </View>
         ) : selectedCourseId && activeCourse ? (
           <CourseSemestersView
@@ -385,14 +407,112 @@ export default function AdminCoursesScreen({ user }) {
             semesters={semestersData}
             isLoading={semestersLoading}
             onBack={() => {
-              setSelectedCourseId(null);
-              setSelectedSemesterObj(null);
+              if (router.canGoBack()) {
+                router.back();
+              } else if (activeSemesterObj) {
+                setSelectedSemesterObj(null);
+              } else {
+                setSelectedCourseId(null);
+                setSelectedSemesterObj(null);
+              }
             }}
             onSelectSemester={(semObj) => {
-              setSelectedSemesterObj(semObj);
-              setActiveDetailTab('curriculum');
+              safePush({
+                pathname: '/admin_courses',
+                params: {
+                  courseId: String(selectedCourseId),
+                  semesterId: String(semObj.id ?? semObj.semester_number),
+                },
+              });
             }}
-          />
+            onEditCourse={() => handleEditCourse(activeCourse)}
+            onDeleteCourse={() => handleDeleteCourse(activeCourse.id, activeCourse.code)}
+          >
+            {activeSemesterObj ? (
+              <View className="flex-1 -mx-4">
+                {/* Active Semester Title */}
+                <View className="px-4 mb-2 flex-row items-center justify-between">
+                  <Text className="text-base font-bold text-slate-900">
+                    {selectedSemesterName}
+                  </Text>
+                </View>
+
+                {/* Quick Action Buttons */}
+                <CourseDetailActions
+                  onAddSubject={openAddSubjectForActiveSemester}
+                  onReassignFaculty={() => router.push('/users/assign')}
+                  onExport={handleExportCourse}
+                />
+
+                {/* Segmented Tabs Control */}
+                <CourseDetailTabs
+                  activeTab={activeDetailTab}
+                  onTabChange={setActiveDetailTab}
+                  studentCount={
+                    activeDetailTab === 'students' && !semesterStudentsLoading
+                      ? semesterStudents.length
+                      : activeSemesterObj.students_count ?? activeCourse.enrolled_students_count ?? 0
+                  }
+                />
+
+                {/* Tab 1: Curriculum */}
+                {activeDetailTab === 'curriculum' && (
+                  <CurriculumTab
+                    course={activeCourse}
+                    semesterObj={activeSemesterObj}
+                    subjects={semesterSubjects}
+                    teachers={teachersList}
+                    isLoading={semesterSubjectsLoading}
+                    isAssigningLead={updateTeacherMutation.isPending}
+                    activeSemester={selectedSemesterName}
+                    onAddSubject={openAddSubjectForActiveSemester}
+                    onDeleteSubject={handleDeleteSubject}
+                    onAssignLeadTeacher={handleAssignLeadTeacher}
+                    onViewTimetable={() => setActiveDetailTab('schedule')}
+                    onSendMessage={(teacher) => {
+                      setSelectedTeacherForMessage(teacher);
+                      setShowMessageModal(true);
+                    }}
+                  />
+                )}
+
+                {/* Tab 2: Students */}
+                {activeDetailTab === 'students' && (
+                  <StudentsTab
+                    course={activeCourse}
+                    students={semesterStudents}
+                    isLoading={semesterStudentsLoading}
+                    activeSemester={selectedSemesterName}
+                    onEnrollBatch={() => setShowBatchEnrollModal(true)}
+                    onShareInvite={() => setShowInviteModal(true)}
+                  />
+                )}
+
+                {/* Tab 3: Schedule */}
+                {activeDetailTab === 'schedule' && (
+                  <ScheduleTab
+                    course={activeCourse}
+                    subjects={semesterSubjects}
+                    isLoading={semesterSubjectsLoading}
+                    activeSemester={selectedSemesterName}
+                    onAddSubject={openAddSubjectForActiveSemester}
+                  />
+                )}
+
+                {/* Tab 4: Controls */}
+                {activeDetailTab === 'controls' && (
+                  <ControlsTab
+                    course={activeCourse}
+                    onAssignFaculty={() => router.push('/users/assign')}
+                    onAddSubject={openAddSubjectForActiveSemester}
+                    onEnrollBatch={() => setShowBatchEnrollModal(true)}
+                    onEditCourse={() => handleEditCourse(activeCourse)}
+                    onDeleteCourse={handleDeleteCourse}
+                  />
+                )}
+              </View>
+            ) : null}
+          </CourseSemestersView>
         ) : (
           <CourseListView
             courses={courses}
@@ -404,8 +524,10 @@ export default function AdminCoursesScreen({ user }) {
             courseCodeFilters={courseCodeFilters}
             filteredCourses={filteredCourses}
             onSelectCourse={(courseId) => {
-              setSelectedCourseId(courseId);
-              setSelectedSemesterObj(null);
+              safePush({
+                pathname: '/admin_courses',
+                params: { courseId: String(courseId) },
+              });
             }}
             onDeleteCourse={handleDeleteCourse}
             onOpenCreateCourse={() => setShowCreateCourseModal(true)}
@@ -420,6 +542,15 @@ export default function AdminCoursesScreen({ user }) {
         courseCode={activeCourse?.code || ''}
         onClose={() => setShowMessageModal(false)}
         onSend={handleSendMessageSubmit}
+      />
+
+      {/* MODAL: STUDENT ENROLLMENT QR / LINK */}
+      <InviteLinkModal
+        visible={showInviteModal}
+        onClose={() => setShowInviteModal(false)}
+        type="student"
+        course={activeCourse}
+        semesterObj={activeSemesterObj}
       />
 
       {/* MODAL: CREATE COURSE */}
@@ -440,6 +571,40 @@ export default function AdminCoursesScreen({ user }) {
         onError={(err) => {
           setConfirmDialog({
             title: 'Failed to Create Course',
+            description: err?.message || 'An unexpected error occurred.',
+            confirmText: 'Close',
+            variant: 'destructive',
+            icon: 'warning',
+            onConfirm: () => setConfirmDialog(null),
+          });
+        }}
+      />
+
+      {/* MODAL: EDIT COURSE */}
+      <EditCourseModal
+        visible={showEditCourseModal}
+        course={courseToEdit}
+        onClose={() => {
+          setShowEditCourseModal(false);
+          setCourseToEdit(null);
+        }}
+        onSuccess={() => {
+          refetchCourses();
+          if (selectedCourseId) {
+            refetchSemesters();
+          }
+          setConfirmDialog({
+            title: 'Course Updated',
+            description: 'Course details have been successfully updated.',
+            confirmText: 'Done',
+            variant: 'default',
+            icon: 'check',
+            onConfirm: () => setConfirmDialog(null),
+          });
+        }}
+        onError={(err) => {
+          setConfirmDialog({
+            title: 'Failed to Update Course',
             description: err?.message || 'An unexpected error occurred.',
             confirmText: 'Close',
             variant: 'destructive',

@@ -7,12 +7,7 @@ from app.modules.users.model import User
 
 
 def get_current_admin(request: Request) -> User:
-    """
-    FastAPI dependency that extracts the user from token, verifies
-    they are active and have the 'admin' role.
-    Raises 401 if token is missing/invalid.
-    Raises 403 if user is not active or does not have 'admin' role.
-    """
+
     token = request.cookies.get("access_token")
     if not token:
         auth_header = request.headers.get("Authorization")
@@ -70,15 +65,7 @@ def get_current_admin(request: Request) -> User:
 
 
 def admin_required(target: Optional[Callable] = None):
-    """
-    Dual-mode admin verification:
-    1. As a FastAPI dependency:
-       `user: User = Depends(admin_required)`
-    2. As a standard Python decorator:
-       @admin_required
-       async def handler(request: Request, ...):
-           ...
-    """
+
     # Case 1: Called directly by FastAPI Depends(admin_required)
     if isinstance(target, Request):
         return get_current_admin(target)

@@ -2,7 +2,6 @@ import React, { useMemo } from 'react';
 import {
   View,
   TouchableOpacity,
-  ActivityIndicator,
 } from 'react-native';
 import {
   ArrowRight,
@@ -11,6 +10,7 @@ import {
   Users,
 } from 'lucide-react-native';
 import { Text } from '../ui/text';
+import { Skeleton } from '../ui/Skeleton';
 import AdminScreenHeader from './AdminScreenHeader';
 import AdminEmptyState from './AdminEmptyState';
 
@@ -145,8 +145,28 @@ export default function CourseListView({
       </View>
 
       {/* Courses Cards */}
-      {coursesLoading ? (
-        <ActivityIndicator size="small" color="#2563eb" className="my-6" />
+      {coursesLoading && courses.length === 0 ? (
+        <View style={{ gap: 12 }}>
+          {[1, 2, 3].map((item) => (
+            <View
+              key={item}
+              className="rounded-3xl bg-white p-5 border border-[#E5E9F2]"
+            >
+              <View className="flex-row items-center justify-between mb-3">
+                <Skeleton width={90} height={24} borderRadius={999} />
+                <Skeleton width={20} height={20} borderRadius={10} />
+              </View>
+              <Skeleton width="78%" height={20} borderRadius={6} />
+              <View className="mt-2">
+                <Skeleton width="55%" height={14} borderRadius={4} />
+              </View>
+              <View className="flex-row gap-2 mt-4">
+                <Skeleton width={85} height={28} borderRadius={999} />
+                <Skeleton width={85} height={28} borderRadius={999} />
+              </View>
+            </View>
+          ))}
+        </View>
       ) : filteredCourses.length > 0 ? (
         filteredCourses.map((course) => (
           <CourseCard

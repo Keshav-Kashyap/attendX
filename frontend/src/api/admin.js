@@ -64,6 +64,15 @@ export const adminApi = {
       method: 'POST',
       body: data,
     }),
+  updateTeacher: (teacherId, data) =>
+    apiClient(`/api/admin/teachers/${teacherId}`, {
+      method: 'PUT',
+      body: data,
+    }),
+  deleteTeacher: (teacherId) =>
+    apiClient(`/api/admin/teachers/${teacherId}`, {
+      method: 'DELETE',
+    }),
   getStudents: (params = {}) => {
     const query = new URLSearchParams();
     if (params.search) query.append('search', params.search);
@@ -76,6 +85,15 @@ export const adminApi = {
     apiClient('/api/admin/students', {
       method: 'POST',
       body: data,
+    }),
+  updateStudent: (studentId, data) =>
+    apiClient(`/api/admin/students/${studentId}`, {
+      method: 'PUT',
+      body: data,
+    }),
+  deleteStudent: (studentId) =>
+    apiClient(`/api/admin/students/${studentId}`, {
+      method: 'DELETE',
     }),
   getTeacherAssignments: (params = {}) => {
     const query = new URLSearchParams();

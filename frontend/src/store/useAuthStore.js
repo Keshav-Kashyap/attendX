@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setStoredToken } from '../api/client';
+import { unregisterPushNotificationsAsync } from '../services/notificationService';
 
 const USER_STORAGE_KEY = '@ai_attendance_user';
 
@@ -53,6 +54,7 @@ export const useAuthStore = create((set, get) => ({
 
   logout: async () => {
     try {
+      await unregisterPushNotificationsAsync();
       set({
         user: null,
         token: null,
