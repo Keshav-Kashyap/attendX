@@ -15,6 +15,7 @@ from app.modules.student.model import Student
 from app.modules.teacher.model import Teacher, TeacherAssignment
 from app.modules.attendance.model import AttendanceSession, AttendanceRecord
 from app.modules.notifications.model import DeviceToken, NotificationPreference, NotificationLog
+from app.modules.auth.model import InviteToken
 
 # Database
 from app.config.database import connect_db

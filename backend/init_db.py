@@ -24,6 +24,8 @@ from app.modules.teacher.model import (
     TeacherAssignment,
 )
 from app.modules.attendance.model import AttendanceSession, AttendanceRecord
+from app.modules.auth.model import InviteToken
+from app.modules.notifications.model import DeviceToken, NotificationPreference, NotificationLog
 
 from app.config.database import connect_db, engine
 from app.modules.admin import seed_default_admin_if_empty

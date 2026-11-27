@@ -26,16 +26,16 @@ load_dotenv()
 
 ENV = os.getenv("ENV")
 
-if ENV == "development":
-    DATABASE_URL = os.getenv("LOCAL_DATABASE_URL") 
-else:
-    DATABASE_URL = os.getenv("DATABASE_URL")
+# Always prioritize DATABASE_URL (Neon PostgreSQL)
+DATABASE_URL = os.getenv("DATABASE_URL") or os.getenv("LOCAL_DATABASE_URL")
 
 if DATABASE_URL:
     if DATABASE_URL.startswith("postgres://"):
         DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg2://", 1)
     elif DATABASE_URL.startswith("postgresql://") and not DATABASE_URL.startswith("postgresql+"):
         DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://", 1)
+    # Strip channel_binding=require if present, as psycopg2-binary/Neon pooler can drop connections with it
+    DATABASE_URL = DATABASE_URL.replace("&channel_binding=require", "").replace("channel_binding=require&", "").replace("?channel_binding=require", "")
 
 engine = create_engine(
     DATABASE_URL,

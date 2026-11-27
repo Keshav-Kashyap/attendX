@@ -1,35 +1,7 @@
-import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Constants from 'expo-constants';
-
-const DEV_LAN_IP = '192.168.31.44';
 
 export const getBaseUrl = () => {
-  if (Platform.OS === 'web') {
-    return 'http://127.0.0.1:5001';
-  }
-
-  try {
-    const hostUri =
-      Constants?.expoConfig?.hostUri ||
-      Constants?.manifest2?.extra?.expoClient?.hostUri ||
-      Constants?.manifest?.debuggerHost;
-
-    if (hostUri) {
-      const hostIp = hostUri.split(':')[0];
-      if (hostIp && !hostIp.includes('localhost') && !hostIp.includes('127.0.0.1')) {
-        return `http://${hostIp}:5001`;
-      }
-    }
-  } catch (err) {
-    console.warn('Error detecting Expo host:', err);
-  }
-
-  if (Platform.OS === 'android') {
-    return `http://${DEV_LAN_IP}:5001`;
-  }
-
-  return `http://${DEV_LAN_IP}:5001`;
+  return (process.env.EXPO_PUBLIC_API_URL || '').replace(/\/+$/, '');
 };
 
 export const API_BASE_URL = getBaseUrl();
@@ -117,7 +89,7 @@ export async function apiClient(endpoint, options = {}) {
     console.warn(`[API Error] for ${url}:`, error.message);
     if (error.name === 'TypeError' && error.message.includes('Network request failed')) {
       const netError = new Error(
-        `Network error: Cannot reach backend at ${API_BASE_URL}. Ensure PC and phone are on same Wi-Fi and backend is running on 0.0.0.0:5001.`
+        `Network error: Cannot reach backend at ${API_BASE_URL}. Please check your internet connection and try again.`
       );
       netError.status = 0;
       throw netError;
